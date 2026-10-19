@@ -74,6 +74,7 @@ public final class ServerEvents {
                     BotAI.cycle(level, d);
                 }
             }
+            if (d.gameTick % 100 == 0) com.endruqq.imperium.game.ChunkLoading.tick(level, d);
             Sync.tick(server, d);
         } catch (Exception e) {
             Imperium.LOGGER.error("Imperium tick failed", e);
@@ -111,6 +112,7 @@ public final class ServerEvents {
         Sync.clear();
         WarManager.clear();
         BuildingManager.clearCaches();
+        com.endruqq.imperium.game.ChunkLoading.clear();
     }
 
     // ------------------------------------------------------------------ combat rules

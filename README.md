@@ -157,5 +157,6 @@ python3 tools/gen_textures.py && python3 tools/gen_data.py   # regeneracja tekst
 ## Ograniczenia
 - Kamera RTS w trybie 3D może oddalić się od twojego ciała tylko na odległość renderowania (świat poza nią nie jest
   załadowany). Całą arenę widać na **mapie strategicznej (M)**, z której też wydasz rozkazy.
-- Jednostki w niezaładowanych chunkach stoją w miejscu (ograniczenie Minecrafta). Boty walczą przede wszystkim tam,
-  gdzie są gracze.
+- Stolice botów i maszerujące armie są utrzymywane w pamięci (opcja `keepArmiesLoaded`), więc wojny toczą się także
+  z dala od graczy. Jednostki stojące w miejscu daleko od wszystkich graczy „zasypiają” razem ze swoim chunkiem
+  (ograniczenie Minecrafta).

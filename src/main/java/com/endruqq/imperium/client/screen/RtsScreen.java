@@ -569,7 +569,7 @@ public class RtsScreen extends Screen {
         }
         double y = -1000;
         if (minecraft.level != null && minecraft.level.hasChunkAt(BlockPos.containing(wx, 64, wz))) {
-            y = minecraft.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(wx), Mth.floor(wz));
+            y = minecraft.level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(wx), Mth.floor(wz));
         }
         orderAt(hasAltDown() ? OrderType.MOVE : OrderType.ATTACK_MOVE, new Vec3(wx, y, wz), -1, -1);
     }
@@ -952,7 +952,7 @@ public class RtsScreen extends Screen {
         BlockHitResult hit = RtsCamera.pickBlock(mx, my);
         if (hit == null) return;
         BlockPos hp = hit.getBlockPos();
-        int y = minecraft.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, hp.getX(), hp.getZ());
+        int y = minecraft.level.getHeight(Heightmap.Types.MOTION_BLOCKING, hp.getX(), hp.getZ());
         p.pos = new BlockPos(hp.getX(), y, hp.getZ());
         if (n == null) {
             p.valid = false;

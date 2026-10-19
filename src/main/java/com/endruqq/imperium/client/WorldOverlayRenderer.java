@@ -153,7 +153,7 @@ public final class WorldOverlayRenderer {
     private static int heightAt(ClientLevel level, double x, double z) {
         int bx = Mth.floor(x), bz = Mth.floor(z);
         if (!level.hasChunkAt(new BlockPos(bx, 64, bz))) return Integer.MIN_VALUE;
-        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz);
     }
 
     private static int owner(GameData d, int pid) {

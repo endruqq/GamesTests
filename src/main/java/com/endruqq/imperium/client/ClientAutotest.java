@@ -276,7 +276,7 @@ public final class ClientAutotest {
                         int x = cap.core.getX() + (int) (Math.cos(a * Math.PI / 8) * r);
                         int z = cap.core.getZ() + (int) (Math.sin(a * Math.PI / 8) * r);
                         if (!mc.level.hasChunkAt(new BlockPos(x, 64, z))) continue;
-                        int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                        int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                         if (!mc.level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty()) continue;
                         BlockPos pos = new BlockPos(x, y, z);
                         if (com.endruqq.imperium.game.BuildingManager.validate(ClientState.data, n.id, Buildings.SMELTERY, pos) == null) best = pos;
@@ -350,7 +350,7 @@ public final class ClientAutotest {
                     int x = cap.core.getX() + (int) (Math.cos(a * Math.PI / 12) * r);
                     int z = cap.core.getZ() + (int) (Math.sin(a * Math.PI / 12) * r);
                     if (!mc.level.hasChunkAt(new BlockPos(x, 64, z))) continue;
-                    int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                     BlockPos pos = new BlockPos(x, y, z);
                     if (!mc.level.getBlockState(pos.below()).getFluidState().isEmpty()) continue;
                     if (com.endruqq.imperium.game.BuildingManager.validate(ClientState.data, n.id, type, pos) != null) continue;

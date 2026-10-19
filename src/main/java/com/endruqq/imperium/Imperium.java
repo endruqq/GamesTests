@@ -40,6 +40,7 @@ public class Imperium {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(ImperiumNet::register);
+        event.enqueueWork(com.endruqq.imperium.game.ChunkLoading::registerCallback);
     }
 
     private void registerAttributes(EntityAttributeCreationEvent event) {

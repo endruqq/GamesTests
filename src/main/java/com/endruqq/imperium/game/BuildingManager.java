@@ -100,6 +100,7 @@ public final class BuildingManager {
         b.pos = pos;
         b.createdTick = d.gameTick;
         b.counts = new int[type.requirements.size()];
+        b.state = prefab ? Building.State.ACTIVE : Building.State.CONSTRUCTION;
         d.buildings.put(b.id, b);
 
         if (prefab) {

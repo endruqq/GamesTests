@@ -13,6 +13,7 @@ public final class ImperiumConfig {
     public static final ForgeConfigSpec.BooleanValue AUTO_BOTS;
     public static final ForgeConfigSpec.BooleanValue PROTECT_TERRITORY;
     public static final ForgeConfigSpec.BooleanValue SET_WORLD_BORDER;
+    public static final ForgeConfigSpec.BooleanValue KEEP_ARMIES_LOADED;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -26,6 +27,7 @@ public final class ImperiumConfig {
         AUTO_BOTS = b.comment("Nations without players become AI controlled when the game starts").define("autoBots", true);
         PROTECT_TERRITORY = b.comment("Prevent foreign players from breaking/placing blocks in a nation's territory unless at war").define("protectTerritory", true);
         SET_WORLD_BORDER = b.comment("Set the vanilla world border to the arena when the game starts").define("setWorldBorder", true);
+        KEEP_ARMIES_LOADED = b.comment("Keep bot capitals and marching armies chunk-loaded so wars also happen far from players").define("keepArmiesLoaded", true);
         b.pop();
         SPEC = b.build();
     }

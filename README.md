@@ -20,8 +20,8 @@ Zrzuty robi automatyczny test klienta w CI przy każdym pushu, więc zawsze poka
 | Dyplomacja: pretekst do wojny, wynik wojny, warunki pokoju | Ekwipunek żołnierza |
 | ![Mieszkańcy](docs/screenshots/imperium_07b_people.png) | ![Naród](docs/screenshots/imperium_07_nation.png) |
 | Mieszkańcy: zawody, małżeństwa, żałoba, miejsca pracy | Przegląd narodu, granice otwarte/zamknięte |
-| ![Gotowce](docs/screenshots/imperium_p01_prefabs.png) | ![Gotowce](docs/screenshots/imperium_p02_prefabs.png) |
-| Gotowe budynki w stylu ceglanych kamienic (`/imperium showcase`) | Fabryka, huta i tartak |
+| ![Gotowce](docs/screenshots/imperium_p01_prefabs.png) | ![Fabryka](docs/screenshots/imperium_p06_prefabs.png) |
+| Gotowce: chata i kamienica z markizą i schodami pożarowymi (`/imperium showcase`) | Fabryka z kominami i karczma |
 
 ## Instalacja
 

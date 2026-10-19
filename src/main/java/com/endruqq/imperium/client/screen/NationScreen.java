@@ -289,22 +289,41 @@ public class NationScreen extends Screen implements RtsChild {
         if (n == null) return;
         GameData d = ClientState.data;
         int x = cx(), y = cy();
-        // summary chips
-        int bx = x;
+        // summary chips, wrapped so they never run under the buttons on the right
         Component cap = Component.translatable("imperium.ui.people.citizens", n.citizenCount, n.citizenCap);
-        int cwid = UiUtil.badge(g, font, bx, y + 2, cap, Theme.PURPLE);
-        if (UiUtil.inside(mx, my, bx, y + 2, cwid, 10)) {
-            hoverTip = Component.translatable("imperium.ui.tip.citizen_cap", 4, PeopleManager.timeBonus(d), PeopleManager.techBonus(n),
-                    PeopleManager.buildingBonus(d, n), n.population);
+        List<Component> chips = new ArrayList<>();
+        List<Integer> colors = new ArrayList<>();
+        chips.add(cap);
+        colors.add(Theme.PURPLE);
+        chips.add(Component.translatable("imperium.ui.people.employed", n.employed));
+        colors.add(Theme.GOOD);
+        chips.add(Component.translatable("imperium.ui.people.unemployed", n.unemployed));
+        colors.add(n.unemployed > 0 ? Theme.WARN : Theme.TEXT_DIM);
+        chips.add(Component.translatable("imperium.ui.people.married", n.marriedCount / 2));
+        colors.add(0xFFE07AB0);
+        if (n.mourningCount > 0) {
+            chips.add(Component.translatable("imperium.ui.people.mourning", n.mourningCount));
+            colors.add(Theme.TEXT_DIM);
         }
-        bx += cwid + 3;
-        bx += UiUtil.badge(g, font, bx, y + 2, Component.translatable("imperium.ui.people.employed", n.employed), Theme.GOOD) + 3;
-        bx += UiUtil.badge(g, font, bx, y + 2, Component.translatable("imperium.ui.people.unemployed", n.unemployed), n.unemployed > 0 ? Theme.WARN : Theme.TEXT_DIM) + 3;
-        int y2 = y + 16;
-        int bx2 = x;
-        bx2 += UiUtil.badge(g, font, bx2, y2 + 2, Component.translatable("imperium.ui.people.married", n.marriedCount / 2), 0xFFE07AB0) + 3;
-        if (n.mourningCount > 0) bx2 += UiUtil.badge(g, font, bx2, y2 + 2, Component.translatable("imperium.ui.people.mourning", n.mourningCount), Theme.TEXT_DIM) + 3;
-        if (n.trappedCount > 0) UiUtil.badge(g, font, bx2, y2 + 2, Component.translatable("imperium.ui.people.trapped", n.trappedCount), Theme.BAD);
+        if (n.trappedCount > 0) {
+            chips.add(Component.translatable("imperium.ui.people.trapped", n.trappedCount));
+            colors.add(Theme.BAD);
+        }
+        int bx = x, by = y + 2, limit = x + cw() - 244;
+        for (int i = 0; i < chips.size(); i++) {
+            int cwid = font.width(chips.get(i)) + 6;
+            if (bx > x && bx + cwid > limit) {
+                bx = x;
+                by += 14;
+                limit = x + cw();
+            }
+            UiUtil.badge(g, font, bx, by, chips.get(i), colors.get(i));
+            if (i == 0 && UiUtil.inside(mx, my, bx, by, cwid, 10)) {
+                hoverTip = Component.translatable("imperium.ui.tip.citizen_cap", 4, PeopleManager.timeBonus(d), PeopleManager.techBonus(n),
+                        PeopleManager.buildingBonus(d, n), n.population);
+            }
+            bx += cwid + 3;
+        }
         int half = cw() / 2 - 4;
         // workplaces
         int sy = y + 32;

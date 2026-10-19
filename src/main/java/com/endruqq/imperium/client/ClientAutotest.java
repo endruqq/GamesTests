@@ -353,28 +353,36 @@ public final class ClientAutotest {
                 step = 201;
             }
             case 201 -> {
-                if (!(mc.screen instanceof RtsScreen)) mc.setScreen(new RtsScreen());
+                // clean shots: spectator camera, no HUD
+                mc.setScreen(null);
+                RtsCamera.exit();
+                cmd(mc, "gamemode spectator");
+                mc.options.hideGui = true;
                 showcaseIndex = 0;
                 wait = 40;
                 step = 202;
             }
             case 202 -> {
-                // two buildings per picture, looking from the south-east at their entrances
+                // two buildings per picture, seen from the south-east, facing their entrances
                 int count = 0;
                 for (com.endruqq.imperium.game.building.BuildingType t : Buildings.all()) if (t.prefabCost != null) count++;
                 if (showcaseIndex >= count) {
+                    mc.options.hideGui = false;
                     step = 210;
                     return;
                 }
                 int i = showcaseIndex;
                 int col = i % com.endruqq.imperium.game.Showcase.PER_ROW, row = i / com.endruqq.imperium.game.Showcase.PER_ROW;
-                double x = showcaseOrigin.getX() + 12 + col * com.endruqq.imperium.game.Showcase.STEP_X + com.endruqq.imperium.game.Showcase.STEP_X / 2.0;
-                double z = showcaseOrigin.getZ() + row * com.endruqq.imperium.game.Showcase.STEP_Z;
-                RtsCamera.lookAt(x, z + 2);
-                RtsCamera.yaw = 160;
-                RtsCamera.pitch = 28;
-                RtsCamera.height = 15;
-                wait = 50;
+                double x = showcaseOrigin.getX() + 12 + col * com.endruqq.imperium.game.Showcase.STEP_X
+                        + (i + 1 < count ? com.endruqq.imperium.game.Showcase.STEP_X / 2.0 : 0);
+                double z = showcaseOrigin.getZ() + row * com.endruqq.imperium.game.Showcase.STEP_Z + 2;
+                double y = showcaseOrigin.getY() + 7;
+                double yaw = Math.toRadians(160), pitch = Math.toRadians(20), dist = 28;
+                double cx = x + Math.sin(yaw) * Math.cos(pitch) * dist;
+                double cz = z - Math.cos(yaw) * Math.cos(pitch) * dist;
+                double cy = y + Math.sin(pitch) * dist;
+                cmd(mc, String.format(java.util.Locale.ROOT, "tp @s %.1f %.1f %.1f 160 20", cx, cy, cz));
+                wait = 60;
                 step = 203;
             }
             case 203 -> {

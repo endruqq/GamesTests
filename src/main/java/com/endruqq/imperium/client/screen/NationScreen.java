@@ -122,14 +122,14 @@ public class NationScreen extends Screen implements RtsChild {
         int y = overviewSplitY() + 14;
         int x = cx() + 6;
         for (TaxLevel t : TaxLevel.values()) {
-            addRenderableWidget(FlatButton.of(x + 52 + t.ordinal() * 50, y, 48, 14, Component.translatable(t.key()), b -> {
+            addRenderableWidget(FlatButton.of(x + 52 + t.ordinal() * 56, y, 54, 14, Component.translatable(t.key()), b -> {
                 CompoundTag tag = new CompoundTag();
                 tag.putInt("level", t.ordinal());
                 send("tax", tag);
             }).selected(n.tax == t).tip(Component.translatable("imperium.ui.tip.tax." + t.name().toLowerCase())));
         }
         Component borderLabel = Component.translatable(n.bordersClosed ? "imperium.ui.borders.closed" : "imperium.ui.borders.open");
-        addRenderableWidget(FlatButton.of(x + 52, y + 17, 148, 14, borderLabel, n.bordersClosed ? FlatButton.Style.DANGER : FlatButton.Style.SUCCESS,
+        addRenderableWidget(FlatButton.of(x + 52, y + 17, 166, 14, borderLabel, n.bordersClosed ? FlatButton.Style.DANGER : FlatButton.Style.SUCCESS,
                 b -> send("borders", new CompoundTag())).tip(Component.translatable("imperium.ui.tip.borders")));
     }
 
@@ -619,7 +619,9 @@ public class NationScreen extends Screen implements RtsChild {
         if (r != null && r.access) flags.add(Component.translatable("imperium.ui.access_active").getString());
         if (r != null && r.guarantees(me.id, o.id)) flags.add(Component.translatable("imperium.ui.we_guarantee").getString());
         if (r != null && r.guarantees(o.id, me.id)) flags.add(Component.translatable("imperium.ui.they_guarantee").getString());
-        UiUtil.text(g, font, UiUtil.trim(font, flags.isEmpty() ? "-" : String.join(" · ", flags), dw - 12), c1, ry, Theme.INFO);
+        String treaties = flags.isEmpty() ? Component.translatable("imperium.ui.none").getString() : String.join(" · ", flags);
+        UiUtil.text(g, font, UiUtil.trim(font, Component.translatable("imperium.ui.treaties", treaties).getString(), dw - 12), c1, ry,
+                flags.isEmpty() ? Theme.TEXT_MUTED : Theme.INFO);
         ry += 10;
         if (rt == RelationType.WAR && r != null) {
             UiUtil.text(g, font, Component.translatable("imperium.ui.war_score", r.scoreOf(me.id), r.scoreOf(o.id)), c1, ry, Theme.WARN);

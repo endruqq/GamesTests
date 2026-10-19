@@ -869,6 +869,8 @@ UI.update({
     "imperium.ui.state.working": ("At work", "W pracy"),
     "imperium.ui.category.all": ("All buildings", "Wszystkie budynki"),
     "imperium.ui.access_active": ("Military access", "Prawo przejścia"),
+    "imperium.ui.treaties": ("Agreements: %s", "Umowy: %s"),
+    "imperium.ui.none": ("none", "brak"),
     "imperium.ui.we_guarantee": ("We guarantee them", "Gwarantujemy im"),
     "imperium.ui.they_guarantee": ("They guarantee us", "Gwarantują nam"),
     "imperium.ui.war_score": ("War score: %s : %s", "Wynik wojny: %s : %s"),

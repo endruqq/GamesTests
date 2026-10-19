@@ -90,7 +90,7 @@ public final class Buildings {
             .tech(Tech.MINING).prefab(cost(ResourceType.WOOD, 40, ResourceType.STONE, 40)).build());
 
     public static final BuildingType SMELTERY = reg(new BuildingType.Builder("smeltery", ECONOMY, 4, 9, Items.BLAST_FURNACE)
-            .req(masonry(40)).req(Requirement.tag("stone_blocks", ModTags.STONE_BLOCKS, Blocks.COBBLESTONE, 20, STRUCTURE))
+            .req(masonry(40)).req(Requirement.block(Blocks.COBBLESTONE, 20, STRUCTURE))
             .req(door()).req(Requirement.block(Blocks.FURNACE, 3, INTERIOR)).req(Requirement.block(Blocks.BLAST_FURNACE, 1, INTERIOR))
             .req(Requirement.tag("anvils", BlockTags.ANVIL, Blocks.ANVIL, 1, INTERIOR))
             .req(Requirement.tag("cauldrons", BlockTags.CAULDRONS, Blocks.CAULDRON, 1, INTERIOR))

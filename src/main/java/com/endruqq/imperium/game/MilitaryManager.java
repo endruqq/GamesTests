@@ -115,7 +115,7 @@ public final class MilitaryManager {
         List<SoldierEntity> list = new ArrayList<>();
         for (int id : ids) {
             Entity e = level.getEntity(id);
-            if (e instanceof SoldierEntity s && s.isAlive() && s.getNationId() == n.id) list.add(s);
+            if (e instanceof SoldierEntity s && s.isAlive() && s.getNationId() == n.id && !s.isSurrendered()) list.add(s);
         }
         return list;
     }
@@ -198,6 +198,26 @@ public final class MilitaryManager {
             result.set(units.indexOf(sorted.get(i)), p);
         }
         return result;
+    }
+
+    /** Patrol: every unit walks from where it stands through the waypoints and back, keeping its place in the formation. */
+    public static void patrol(ServerLevel level, GameData d, Nation n, int[] ids, List<Vec3> waypoints) {
+        List<SoldierEntity> units = ownUnits(level, n, ids);
+        if (units.isEmpty() || waypoints.isEmpty()) return;
+        Vec3 first = waypoints.get(0);
+        List<Vec3> slots = formation(units, first, level);
+        for (int i = 0; i < units.size(); i++) {
+            SoldierEntity s = units.get(i);
+            Vec3 off = slots.get(i).subtract(first);
+            List<Vec3> route = new ArrayList<>();
+            route.add(s.position());
+            for (Vec3 w : waypoints) {
+                Vec3 p = w.add(off.x, 0, off.z);
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(p.x), (int) Math.floor(p.z));
+                route.add(w.y < -500 || Math.abs(y - w.y) < 6 ? new Vec3(p.x, y, p.z) : p);
+            }
+            s.patrol(route);
+        }
     }
 
     public static void setStance(ServerLevel level, Nation n, int[] ids, Stance stance) {

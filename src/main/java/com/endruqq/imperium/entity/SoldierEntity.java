@@ -55,6 +55,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
@@ -62,6 +64,8 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
     private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_ORDER = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_STANCE = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_SURRENDERED = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<CompoundTag> DATA_PATROL = SynchedEntityData.defineId(SoldierEntity.class, EntityDataSerializers.COMPOUND_TAG);
 
     private Vec3 orderPos;
     private UUID orderEntity;
@@ -72,6 +76,16 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
     private boolean retreating;
     private int regenTimer;
     private String soldierName = "";
+    // ---- prisoners of war ----
+    private int captor = -1;
+    private long surrenderTick;
+    private int persuadeAttempts;
+    private ItemStack holsteredMain = ItemStack.EMPTY;
+    private ItemStack holsteredOff = ItemStack.EMPTY;
+    // ---- patrol ----
+    private final List<Vec3> patrol = new ArrayList<>();
+    private int patrolIndex;
+    private boolean patrolBack;
 
     public SoldierEntity(EntityType<? extends SoldierEntity> type, Level level) {
         super(type, level);
@@ -101,6 +115,8 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
         entityData.define(DATA_TYPE, 0);
         entityData.define(DATA_ORDER, OrderType.HOLD.ordinal());
         entityData.define(DATA_STANCE, Stance.DEFENSIVE.ordinal());
+        entityData.define(DATA_SURRENDERED, false);
+        entityData.define(DATA_PATROL, new CompoundTag());
     }
 
     @Override
@@ -201,6 +217,113 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
         order(OrderType.HOLD, at, null, -1);
     }
 
+    /** Walk the route back and forth. */
+    public void patrol(List<Vec3> route) {
+        order(OrderType.PATROL, route.isEmpty() ? position() : route.get(0), null, -1);
+        patrol.clear();
+        patrol.addAll(route);
+        patrolIndex = 0;
+        patrolBack = false;
+        syncPatrol();
+    }
+
+    @Nullable
+    public Vec3 patrolPoint() {
+        if (patrol.isEmpty()) return null;
+        return patrol.get(Math.max(0, Math.min(patrol.size() - 1, patrolIndex)));
+    }
+
+    public void advancePatrol() {
+        if (patrol.size() < 2) return;
+        if (patrolBack) {
+            if (--patrolIndex <= 0) {
+                patrolIndex = 0;
+                patrolBack = false;
+            }
+        } else if (++patrolIndex >= patrol.size() - 1) {
+            patrolIndex = patrol.size() - 1;
+            patrolBack = true;
+        }
+        orderPos = patrol.get(patrolIndex);
+    }
+
+    private void syncPatrol() {
+        CompoundTag t = new CompoundTag();
+        net.minecraft.nbt.ListTag l = new net.minecraft.nbt.ListTag();
+        for (Vec3 v : patrol) {
+            CompoundTag p = new CompoundTag();
+            p.putDouble("x", v.x);
+            p.putDouble("y", v.y);
+            p.putDouble("z", v.z);
+            l.add(p);
+        }
+        t.put("p", l);
+        entityData.set(DATA_PATROL, t);
+    }
+
+    /** Patrol route as synced to clients (for drawing). */
+    public List<Vec3> clientPatrol() {
+        List<Vec3> l = new ArrayList<>();
+        if (getOrder() != OrderType.PATROL) return l;
+        net.minecraft.nbt.ListTag pl = entityData.get(DATA_PATROL).getList("p", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < pl.size(); i++) {
+            CompoundTag p = pl.getCompound(i);
+            l.add(new Vec3(p.getDouble("x"), p.getDouble("y"), p.getDouble("z")));
+        }
+        return l;
+    }
+
+    // ------------------------------------------------------------------ prisoners of war
+
+    public boolean isSurrendered() {
+        return entityData.get(DATA_SURRENDERED);
+    }
+
+    public int getCaptor() {
+        return captor;
+    }
+
+    public long getSurrenderTick() {
+        return surrenderTick;
+    }
+
+    public int getPersuadeAttempts() {
+        return persuadeAttempts;
+    }
+
+    public void addPersuadeAttempt() {
+        persuadeAttempts++;
+    }
+
+    /** Lay down arms: weapons go into the pack, hands go up. */
+    public void surrender(int captorNation, long tick) {
+        if (isSurrendered()) return;
+        entityData.set(DATA_SURRENDERED, true);
+        captor = captorNation;
+        surrenderTick = tick;
+        persuadeAttempts = 0;
+        holsteredMain = getMainHandItem().copy();
+        holsteredOff = getOffhandItem().copy();
+        setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+        setTarget(null);
+        retreating = false;
+        hold(position());
+        setStance(Stance.PASSIVE);
+        playSound(SoundEvents.ARMOR_EQUIP_CHAIN, 1.0F, 0.7F);
+    }
+
+    /** Take the weapons back (released or recruited). */
+    public void rearm() {
+        entityData.set(DATA_SURRENDERED, false);
+        captor = -1;
+        if (!holsteredMain.isEmpty()) setItemSlot(EquipmentSlot.MAINHAND, holsteredMain);
+        if (!holsteredOff.isEmpty()) setItemSlot(EquipmentSlot.OFFHAND, holsteredOff);
+        holsteredMain = ItemStack.EMPTY;
+        holsteredOff = ItemStack.EMPTY;
+        setStance(Stance.DEFENSIVE);
+    }
+
     public Vec3 getOrderPos() {
         return orderPos == null ? position() : orderPos;
     }
@@ -222,7 +345,7 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
 
     /** May the soldier start/continue a fight according to its order and stance? */
     public boolean canFight() {
-        if (retreating) return false;
+        if (retreating || isSurrendered()) return false;
         OrderType o = getOrder();
         if (o == OrderType.MOVE || o == OrderType.RETURN) return false;
         if (o == OrderType.ATTACK_TARGET) return true;
@@ -232,7 +355,8 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
     /** May the soldier look for new targets on its own? */
     public boolean canAcquireTargets() {
         if (!canFight()) return false;
-        return getStance() != Stance.PASSIVE || getOrder() == OrderType.ATTACK_MOVE || getOrder() == OrderType.ATTACK_CORE;
+        return getStance() != Stance.PASSIVE || getOrder() == OrderType.ATTACK_MOVE || getOrder() == OrderType.ATTACK_CORE
+                || getOrder() == OrderType.PATROL;
     }
 
     public void markEngaged() {
@@ -244,6 +368,13 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
         if (getOrder() == OrderType.ATTACK_TARGET) return true;
         double leash = getStance().leash;
         if (getOrder() == OrderType.ATTACK_MOVE || getOrder() == OrderType.ATTACK_CORE) leash = Math.max(leash, 20);
+        if (getOrder() == OrderType.PATROL) leash = Math.max(leash, 18);
+        LivingEntity t = getTarget();
+        if (t != null && !level().isClientSide) {
+            GameData gd = Game.data(level());
+            // intruders on our closed land are chased as long as they stay on it
+            if (gd != null && com.endruqq.imperium.game.BorderManager.isTrespasser(gd, t, getNationId())) return true;
+        }
         if (getStance() == Stance.PASSIVE) leash = 8;
         Vec3 anchor = engagePos != null ? engagePos : getOrderPos();
         return position().distanceToSqr(anchor) <= leash * leash;
@@ -310,6 +441,10 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
     public void aiStep() {
         updateSwingTime();
         super.aiStep();
+        if (!level().isClientSide && isAlive() && isSurrendered()) {
+            getNavigation().stop();
+            setTarget(null);
+        }
         if (!level().isClientSide && isAlive()) {
             if (--regenTimer <= 0) {
                 regenTimer = 40;
@@ -349,6 +484,11 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
                     n.addLog(Component.translatable("imperium.log.soldier_died", getDisplayName(),
                             source.getEntity() != null ? source.getEntity().getDisplayName() : Component.translatable("imperium.unknown")));
                     d.markChanged();
+                }
+                int killer = Allegiance.nationOf(source.getEntity(), d);
+                if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    if (isSurrendered() && killer >= 0) com.endruqq.imperium.game.PrisonerManager.warCrime(sl, d, this, killer);
+                    else if (killer >= 0 && d.atWar(killer, getNationId())) d.relation(killer, getNationId()).addScore(killer, 2);
                 }
             }
         }
@@ -398,6 +538,10 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
         int pn = d == null ? -1 : d.nationIdOf(player.getUUID());
         boolean own = pn >= 0 && pn == getNationId();
         ItemStack held = player.getItemInHand(hand);
+        if (isSurrendered()) {
+            DialogManager.openPrisonerDialog(sp, this);
+            return InteractionResult.CONSUME;
+        }
         if (own) {
             if (player.isShiftKeyDown()) {
                 openEquipment(sp);
@@ -453,6 +597,23 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("OProvince", orderProvince);
         if (home != null) tag.putLong("Home", home.asLong());
         tag.putString("SName", soldierName);
+        tag.putBoolean("Surrendered", isSurrendered());
+        tag.putInt("Captor", captor);
+        tag.putLong("SurrenderTick", surrenderTick);
+        tag.putInt("Persuade", persuadeAttempts);
+        if (!holsteredMain.isEmpty()) tag.put("HolsterMain", holsteredMain.save(new CompoundTag()));
+        if (!holsteredOff.isEmpty()) tag.put("HolsterOff", holsteredOff.save(new CompoundTag()));
+        net.minecraft.nbt.ListTag pl = new net.minecraft.nbt.ListTag();
+        for (Vec3 v : patrol) {
+            CompoundTag p = new CompoundTag();
+            p.putDouble("x", v.x);
+            p.putDouble("y", v.y);
+            p.putDouble("z", v.z);
+            pl.add(p);
+        }
+        tag.put("Patrol", pl);
+        tag.putInt("PatrolIndex", patrolIndex);
+        tag.putBoolean("PatrolBack", patrolBack);
     }
 
     @Override
@@ -467,5 +628,20 @@ public class SoldierEntity extends PathfinderMob implements RangedAttackMob {
         orderProvince = tag.getInt("OProvince");
         if (tag.contains("Home")) home = BlockPos.of(tag.getLong("Home"));
         soldierName = tag.getString("SName");
+        entityData.set(DATA_SURRENDERED, tag.getBoolean("Surrendered"));
+        captor = tag.contains("Captor") ? tag.getInt("Captor") : -1;
+        surrenderTick = tag.getLong("SurrenderTick");
+        persuadeAttempts = tag.getInt("Persuade");
+        holsteredMain = tag.contains("HolsterMain") ? ItemStack.of(tag.getCompound("HolsterMain")) : ItemStack.EMPTY;
+        holsteredOff = tag.contains("HolsterOff") ? ItemStack.of(tag.getCompound("HolsterOff")) : ItemStack.EMPTY;
+        patrol.clear();
+        net.minecraft.nbt.ListTag pl = tag.getList("Patrol", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < pl.size(); i++) {
+            CompoundTag p = pl.getCompound(i);
+            patrol.add(new Vec3(p.getDouble("x"), p.getDouble("y"), p.getDouble("z")));
+        }
+        patrolIndex = tag.getInt("PatrolIndex");
+        patrolBack = tag.getBoolean("PatrolBack");
+        syncPatrol();
     }
 }

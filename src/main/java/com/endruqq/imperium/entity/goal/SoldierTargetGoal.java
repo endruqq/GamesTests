@@ -26,6 +26,22 @@ public class SoldierTargetGoal extends Goal {
         return soldier.isRangedUnitArmed() ? 22.0 : 16.0;
     }
 
+    /** Intruders on closed land are spotted from further away (much further near a watchtower). */
+    private LivingEntity intruder(GameData d) {
+        double r = com.endruqq.imperium.game.BorderManager.pursuitRange(d, soldier);
+        if (r <= 0) return null;
+        LivingEntity best = null;
+        double bd = r * r;
+        for (LivingEntity e : com.endruqq.imperium.game.BorderManager.intrudersOf(soldier.level(), d, soldier.getNationId())) {
+            double dd = soldier.distanceToSqr(e);
+            if (dd < bd) {
+                bd = dd;
+                best = e;
+            }
+        }
+        return best;
+    }
+
     @Override
     public boolean canUse() {
         if (--cooldown > 0) return false;
@@ -53,6 +69,7 @@ public class SoldierTargetGoal extends Goal {
                 best = e;
             }
         }
+        if (best == null && soldier.getStance() != com.endruqq.imperium.entity.Stance.PASSIVE) best = intruder(d);
         candidate = best;
         return best != null;
     }
@@ -69,7 +86,8 @@ public class SoldierTargetGoal extends Goal {
         if (!soldier.canFight()) return false;
         GameData d = Game.data(soldier.level());
         if (d == null) return false;
-        if (!Allegiance.isHostile(d, soldier.getNationId(), t, true)) return false;
+        if (!Allegiance.isHostileTo(d, soldier, t, true)) return false;
+        if (com.endruqq.imperium.game.BorderManager.isTrespasser(d, t, soldier.getNationId())) return true;
         return soldier.distanceToSqr(t) < 40 * 40;
     }
 

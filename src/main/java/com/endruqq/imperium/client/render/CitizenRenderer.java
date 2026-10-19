@@ -24,6 +24,15 @@ public class CitizenRenderer extends HumanoidMobRenderer<CitizenEntity, PlayerMo
     }
 
     @Override
+    public void render(CitizenEntity e, float yaw, float pt, com.mojang.blaze3d.vertex.PoseStack pose,
+                       net.minecraft.client.renderer.MultiBufferSource buf, int light) {
+        getModel().rightArmPose = e.getMainHandItem().isEmpty() ? net.minecraft.client.model.HumanoidModel.ArmPose.EMPTY
+                : net.minecraft.client.model.HumanoidModel.ArmPose.ITEM;
+        getModel().crouching = e.hasState(CitizenEntity.MOURNING);
+        super.render(e, yaw, pt, pose, buf, light);
+    }
+
+    @Override
     public ResourceLocation getTextureLocation(CitizenEntity e) {
         int skin = Math.floorMod(e.getSkin(), CitizenEntity.SKINS);
         return TEXTURES[(e.isFemale() ? CitizenEntity.SKINS : 0) + skin];

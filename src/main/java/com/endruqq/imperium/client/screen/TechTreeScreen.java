@@ -2,6 +2,7 @@ package com.endruqq.imperium.client.screen;
 
 import com.endruqq.imperium.client.ClientState;
 import com.endruqq.imperium.client.UiUtil;
+import com.endruqq.imperium.client.ui.Theme;
 import com.endruqq.imperium.entity.UnitType;
 import com.endruqq.imperium.game.Nation;
 import com.endruqq.imperium.game.building.BuildingType;
@@ -40,10 +41,10 @@ public class TechTreeScreen extends Screen implements RtsChild {
     protected void init() {
         NODE_W = Math.max(64, Math.min(112, (width - 16) / 6 - 6));
         colStep = Math.max(NODE_W + 6, Math.min(NODE_W + 40, (width - 16 - NODE_W) / 5));
-        rowStep = Math.max(NODE_H + 14, Math.min(NODE_H + 40, (height - 70) / 4));
+        rowStep = Math.max(NODE_H + 12, Math.min(NODE_H + 36, (height - 84) / 4));
         int totalW = colStep * 5 + NODE_W;
         gridX = (width - totalW) / 2;
-        gridY = 50;
+        gridY = 56;
     }
 
     private int nodeX(Tech t) {
@@ -56,30 +57,36 @@ public class TechTreeScreen extends Screen implements RtsChild {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        g.fill(0, 0, width, height, 0xE80C1015);
         Nation n = ClientState.myNation();
-        g.drawCenteredString(font, title, width / 2, 8, 0xFFFFD700);
+        g.fill(0, 0, width, 30, Theme.HEADER);
+        g.hLine(0, width, 30, Theme.BORDER_LIGHT);
+        g.drawCenteredString(font, title, width / 2, 5, Theme.ACCENT);
         if (n == null) {
-            g.drawCenteredString(font, Component.translatable("imperium.hud.no_nation"), width / 2, height / 2, 0xFFAAAAAA);
+            g.drawCenteredString(font, Component.translatable("imperium.hud.no_nation"), width / 2, height / 2, Theme.TEXT_DIM);
             return;
         }
-        g.drawCenteredString(font, Component.translatable("imperium.ui.research_points", (int) n.research, UiUtil.signed(n.researchDelta)),
-                width / 2, 22, 0xFF9AD0FF);
+        Component rp = Component.translatable("imperium.ui.research_points", (int) n.research, UiUtil.signed(n.researchDelta));
+        g.drawCenteredString(font, rp, width / 2, 17, Theme.INFO);
         String[] branches = {"imperium.ui.branch.economy", "imperium.ui.branch.society", "imperium.ui.branch.military"};
+        int[] branchColors = {0xFF6FBF5A, 0xFF5AA9E6, 0xFFE5534B};
         for (int b = 0; b < 3; b++) {
-            int x = gridX + b * 2 * colStep + (colStep + NODE_W) / 2;
-            g.drawCenteredString(font, Component.translatable(branches[b]), x, 36, 0xFFCCCCCC);
+            int x0 = gridX + b * 2 * colStep - 4;
+            int x1 = gridX + (b * 2 + 1) * colStep + NODE_W + 4;
+            g.fill(x0, 36, x1, 48, Theme.alpha(branchColors[b], 0x30));
+            g.fill(x0, 47, x1, 48, branchColors[b]);
+            g.drawCenteredString(font, Component.translatable(branches[b]), (x0 + x1) / 2, 38, Theme.TEXT);
         }
         // connections
         for (Tech t : Tech.values()) {
             for (Tech p : t.prerequisites()) {
                 int x0 = nodeX(p) + NODE_W / 2, y0 = nodeY(p) + NODE_H;
                 int x1 = nodeX(t) + NODE_W / 2, y1 = nodeY(t);
-                int col = n.has(p) ? 0xFF80C080 : 0xFF606060;
+                int col = n.has(p) ? (n.has(t) ? Theme.GOOD : Theme.ACCENT_DARK) : 0xFF3A4350;
                 int midY = (y0 + y1) / 2;
-                g.vLine(x0, y0, midY, col);
-                g.hLine(Math.min(x0, x1), Math.max(x0, x1), midY, col);
-                g.vLine(x1, midY, y1, col);
+                g.fill(x0, y0, x0 + 2, midY + 1, col);
+                g.fill(Math.min(x0, x1), midY, Math.max(x0, x1) + 2, midY + 2, col);
+                g.fill(x1, midY, x1 + 2, y1, col);
             }
         }
         Tech hovered = null;
@@ -88,17 +95,27 @@ public class TechTreeScreen extends Screen implements RtsChild {
             boolean has = n.has(t);
             boolean avail = t.available(n);
             boolean afford = avail && n.research >= t.cost;
-            int bg = has ? 0xFF1F4A26 : afford ? 0xFF5A4A16 : avail ? 0xFF3A3A26 : 0xFF262626;
-            int border = has ? 0xFF60E070 : afford ? 0xFFFFD700 : avail ? 0xFFA0A060 : 0xFF505050;
             boolean hover = UiUtil.inside(mx, my, x, y, NODE_W, NODE_H);
             if (hover) hovered = t;
-            g.fill(x, y, x + NODE_W, y + NODE_H, bg);
+            int bg = has ? 0xFF17311F : afford ? 0xFF3A3115 : avail ? 0xFF242A33 : 0xFF181C22;
+            int border = has ? Theme.GOOD : afford ? Theme.ACCENT : avail ? Theme.BORDER_LIGHT : Theme.BORDER;
+            if (afford && (System.currentTimeMillis() / 600) % 2 == 0) g.fill(x - 1, y - 1, x + NODE_W + 1, y + NODE_H + 1, Theme.alpha(Theme.ACCENT, 0x40));
+            g.fill(x, y, x + NODE_W, y + NODE_H, hover ? Theme.mix(bg, 0xFFFFFFFF, 0.08) : bg);
             g.renderOutline(x, y, NODE_W, NODE_H, hover ? 0xFFFFFFFF : border);
-            g.renderItem(t.icon(), x + 4, y + 7);
-            g.drawString(font, UiUtil.trim(font, t.title().getString(), NODE_W - 26), x + 23, y + 5, has ? 0xFF90FF90 : 0xFFFFFFFF);
+            g.fill(x + 1, y + 1, x + 3, y + NODE_H - 1, border);
+            g.renderItem(t.icon(), x + 5, y + 7);
+            g.drawString(font, UiUtil.trim(font, t.title().getString(), NODE_W - 28), x + 24, y + 5, has ? 0xFFB6F2C8 : avail ? Theme.TEXT : Theme.TEXT_MUTED, false);
             String cost = has ? "✔" : t.cost + " ✦";
-            g.drawString(font, cost, x + 23, y + 17, has ? 0xFF60E070 : afford ? 0xFFFFD700 : 0xFF999999);
+            g.drawString(font, cost, x + 24, y + 17, has ? Theme.GOOD : afford ? Theme.ACCENT : Theme.TEXT_MUTED, false);
+            if (!avail && !has) g.drawString(font, "⊘", x + NODE_W - 10, y + 3, Theme.TEXT_MUTED, false);
         }
+        // legend
+        int ly = height - 14;
+        int lx = width / 2 - 150;
+        lx = legend(g, lx, ly, Theme.GOOD, Component.translatable("imperium.ui.tech.legend.done"));
+        lx = legend(g, lx, ly, Theme.ACCENT, Component.translatable("imperium.ui.tech.legend.ready"));
+        lx = legend(g, lx, ly, Theme.BORDER_LIGHT, Component.translatable("imperium.ui.tech.legend.available"));
+        legend(g, lx, ly, Theme.BORDER, Component.translatable("imperium.ui.tech.legend.locked"));
         super.render(g, mx, my, pt);
         if (hovered != null) {
             List<FormattedCharSequence> lines = new ArrayList<>();
@@ -120,6 +137,12 @@ public class TechTreeScreen extends Screen implements RtsChild {
             }
             g.renderTooltip(font, lines, mx, my);
         }
+    }
+
+    private int legend(GuiGraphics g, int x, int y, int color, Component label) {
+        g.fill(x, y + 1, x + 7, y + 8, color);
+        g.drawString(font, label, x + 10, y, Theme.TEXT_DIM, false);
+        return x + 18 + font.width(label);
     }
 
     @Override

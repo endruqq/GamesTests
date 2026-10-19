@@ -101,6 +101,7 @@ public final class BuildingManager {
         b.createdTick = d.gameTick;
         b.counts = new int[type.requirements.size()];
         b.state = prefab ? Building.State.ACTIVE : Building.State.CONSTRUCTION;
+        if (prefab) b.facing = front == null || front.getAxis() == Direction.Axis.Y ? Direction.SOUTH : front;
         d.buildings.put(b.id, b);
 
         if (prefab) {
@@ -255,6 +256,13 @@ public final class BuildingManager {
             boolean ok = have >= r.count;
             MutableComponent line = Component.literal(ok ? " ✔ " : " ✘ ").append(r.name()).append(": " + Math.min(have, r.count) + "/" + r.count);
             player.sendSystemMessage(line.withStyle(ok ? ChatFormatting.GREEN : ChatFormatting.RED));
+        }
+        if (type.isWorkplace()) {
+            player.sendSystemMessage(Component.translatable("imperium.msg.site_workers", b.workers, type.workerSlots, type.profession.title())
+                    .withStyle(ChatFormatting.GRAY));
+        }
+        if (!b.tunnels.isEmpty()) {
+            player.sendSystemMessage(Component.translatable("imperium.msg.mine_depth", MineWorks.depth(b), b.tunnels.size()).withStyle(ChatFormatting.GRAY));
         }
         player.sendSystemMessage(type.description().copy().withStyle(ChatFormatting.AQUA));
     }

@@ -131,6 +131,38 @@ public final class WarManager {
                 if (cp != null && cp.id == p.id) c.setNationId(newOwner);
             }
         }
+        // the people living in the province now belong to the conqueror (and keep working in its buildings)
+        for (Person person : d.people.values()) {
+            if (person.nation != oldOwner) continue;
+            CitizenEntity c = PeopleManager.entity(person);
+            Province hp = c != null ? d.provinceAt(c.blockPosition()) : person.home == null ? null : d.provinceAt(person.home);
+            if (hp != null && hp.id == p.id) person.nation = newOwner;
+        }
+        PeopleManager.recountWorkers(d);
+        // spoils of war
+        if (loser != null && winner != null) {
+            Resources loot = new Resources();
+            for (ResourceType t : new ResourceType[]{ResourceType.GOLD, ResourceType.STEEL, ResourceType.GOODS, ResourceType.FOOD}) {
+                double take = Math.floor(loser.stock.get(t) * 0.15);
+                loser.stock.add(t, -take);
+                loot.add(t, take);
+            }
+            winner.stock.add(loot, 1);
+            if (!loot.isEmpty()) {
+                Notify.nation(level.getServer(), d, winner.id, Component.translatable("imperium.msg.loot", p.name, loot.describe(1))
+                        .withStyle(ChatFormatting.GOLD), false);
+            }
+            Relation wr = d.relation(winner.id, loser.id);
+            if (wr != null) wr.addScore(winner.id, 15);
+            // the garrison lays down arms; when the capital falls, the whole army does
+            int surrendered = wasCapital ? PrisonerManager.surrenderArmy(level, d, loser, winner.id)
+                    : PrisonerManager.surrenderGarrison(level, d, p, loser.id, winner.id);
+            if (surrendered > 0) {
+                Notify.all(level.getServer(), Component.translatable(wasCapital ? "imperium.msg.army_surrenders" : "imperium.msg.garrison_surrenders",
+                        loser.name, surrendered, winner.name).withStyle(ChatFormatting.YELLOW), true);
+                winner.addGossip(Gossip.of("surrender", loser.name, String.valueOf(surrendered), p.name, d.gameTick));
+            }
+        }
         if (level.isLoaded(p.core)) {
             TowerBuilder.paintFlags(level, p.core, winner, winner != null && winner.capitalProvince == p.id);
             level.playSound(null, p.core, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 4.0F, 1.0F);
@@ -141,6 +173,52 @@ public final class WarManager {
         if (winner != null) winner.addLog(Component.translatable("imperium.log.captured", p.name));
         if (loser != null) loser.addLog(Component.translatable("imperium.log.lost", p.name, winner == null ? "?" : winner.name));
 
+        if (loser != null && wasCapital) relocateCapital(level, d, loser);
+        if (loser != null && d.provincesOf(loser.id).isEmpty()) eliminate(level, d, loser, winner);
+        d.markTerritoryChanged();
+        d.markChanged();
+        checkVictory(level, d);
+    }
+
+    /** A province changes hands by treaty: no plunder, no prisoners. */
+    public static void cede(ServerLevel level, GameData d, Province p, int newOwner) {
+        int oldOwner = p.owner;
+        Nation loser = d.nation(oldOwner);
+        Nation winner = d.nation(newOwner);
+        if (winner == null || oldOwner == newOwner) return;
+        boolean wasCapital = loser != null && loser.capitalProvince == p.id;
+        p.owner = newOwner;
+        p.coreMaxHp = maxCoreHp(d, p);
+        p.coreHp = Math.min(p.coreHp, p.coreMaxHp);
+        p.lastAttackTick = -100000;
+        for (Building b : d.buildings.values()) {
+            Province bp = d.provinceAt(b.pos);
+            if (bp != null && bp.id == p.id) b.nation = newOwner;
+        }
+        for (CitizenEntity c : UnitRegistry.citizens()) {
+            Province cp = d.provinceAt(c.blockPosition());
+            if (c.getNationId() == oldOwner && cp != null && cp.id == p.id) c.setNationId(newOwner);
+        }
+        for (Person person : d.people.values()) {
+            if (person.nation != oldOwner) continue;
+            CitizenEntity c = PeopleManager.entity(person);
+            Province hp = c != null ? d.provinceAt(c.blockPosition()) : person.home == null ? null : d.provinceAt(person.home);
+            if (hp != null && hp.id == p.id) person.nation = newOwner;
+        }
+        PeopleManager.recountWorkers(d);
+        if (loser != null) {
+            int lostCells = Math.max(1, p.cellCount);
+            int totalCells = Math.max(lostCells, d.cellsOf(oldOwner) + lostCells);
+            int moved = Math.min((int) Math.round(loser.population * (lostCells / (double) totalCells)), Math.max(0, loser.population - 1));
+            loser.population -= moved;
+            winner.population += moved;
+            loser.lastProvinceLostTick = d.gameTick;
+            loser.addLog(Component.translatable("imperium.log.ceded", p.name, winner.name));
+        }
+        winner.addLog(Component.translatable("imperium.log.received", p.name));
+        if (p.core != null && level.isLoaded(p.core)) TowerBuilder.paintFlags(level, p.core, winner, winner.capitalProvince == p.id);
+        Notify.all(level.getServer(), Component.translatable("imperium.msg.province_ceded", p.name, loser == null ? "?" : loser.name, winner.name)
+                .withStyle(ChatFormatting.GOLD), true);
         if (loser != null && wasCapital) relocateCapital(level, d, loser);
         if (loser != null && d.provincesOf(loser.id).isEmpty()) eliminate(level, d, loser, winner);
         d.markTerritoryChanged();
@@ -174,14 +252,15 @@ public final class WarManager {
         List<SoldierEntity> soldiers = new ArrayList<>(UnitRegistry.soldiersOf(loser.id));
         for (SoldierEntity s : soldiers) {
             if (by != null) {
-                s.setNationId(by.id);
-                s.hold(s.position());
-                by.soldierCount++;
+                if (!s.isSurrendered()) s.surrender(by.id, d.gameTick);
             } else {
                 s.discard();
             }
         }
-        loser.soldierCount = 0;
+        if (by == null) loser.soldierCount = 0;
+        for (Person p : d.people.values()) {
+            if (p.nation == loser.id && by != null) p.nation = by.id;
+        }
         Notify.all(level.getServer(), Component.translatable("imperium.msg.eliminated", loser.name,
                 by == null ? "?" : by.name).withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), true);
         d.markChanged();

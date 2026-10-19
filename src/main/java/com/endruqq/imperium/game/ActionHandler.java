@@ -64,6 +64,62 @@ public final class ActionHandler {
                     Vec3 target = new Vec3(t.getDouble("x"), t.getDouble("y"), t.getDouble("z"));
                     MilitaryManager.command(level, d, n, t.getIntArray("ids"), order, target, t.getInt("entity"), t.getInt("province"), player);
                 }
+                case "patrol" -> {
+                    if (n == null) return;
+                    java.util.List<Vec3> pts = new java.util.ArrayList<>();
+                    net.minecraft.nbt.ListTag l = t.getList("points", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                    for (int i = 0; i < l.size() && i < 8; i++) {
+                        CompoundTag pt = l.getCompound(i);
+                        pts.add(new Vec3(pt.getDouble("x"), pt.getDouble("y"), pt.getDouble("z")));
+                    }
+                    MilitaryManager.patrol(level, d, n, t.getIntArray("ids"), pts);
+                }
+                case "people" -> {
+                    if (n == null) return;
+                    com.endruqq.imperium.network.ImperiumNet.sendTo(player,
+                            new com.endruqq.imperium.network.ClientActionPacket("people", PeopleManager.listFor(d, n)));
+                }
+                case "jobs" -> {
+                    if (n == null) return;
+                    String op = t.getString("op");
+                    BuildingType type = Buildings.get(t.getString("type"));
+                    Component err = null;
+                    switch (op) {
+                        case "hire" -> err = type == null ? null : PeopleManager.hire(d, n, type);
+                        case "fire" -> {
+                            if (type != null) PeopleManager.fire(d, n, type);
+                        }
+                        case "auto" -> {
+                            int hired = PeopleManager.autoAssign(d, n);
+                            player.displayClientMessage(Component.translatable("imperium.msg.auto_hired", hired).withStyle(ChatFormatting.GREEN), true);
+                        }
+                        case "toggle_auto" -> n.autoJobs = !n.autoJobs;
+                        case "fire_person" -> {
+                            Person p = d.people.get(t.getUUID("id"));
+                            if (p != null && p.nation == n.id) PeopleManager.unassign(d, p);
+                            PeopleManager.recountWorkers(d);
+                        }
+                        default -> {
+                        }
+                    }
+                    if (err != null) player.displayClientMessage(err.copy().withStyle(ChatFormatting.RED), true);
+                    PeopleManager.stats(d, n);
+                    d.markChanged();
+                    com.endruqq.imperium.network.ImperiumNet.sendTo(player,
+                            new com.endruqq.imperium.network.ClientActionPacket("people", PeopleManager.listFor(d, n)));
+                }
+                case "borders" -> {
+                    if (n == null) return;
+                    if (n.leader != null && !n.leader.equals(player.getUUID()) && server.getPlayerList().getPlayer(n.leader) != null) {
+                        player.displayClientMessage(Component.translatable("imperium.err.leader_only").withStyle(ChatFormatting.RED), true);
+                        return;
+                    }
+                    n.bordersClosed = !n.bordersClosed;
+                    n.addLog(Component.translatable(n.bordersClosed ? "imperium.log.borders_closed" : "imperium.log.borders_opened"));
+                    Notify.all(server, Component.translatable(n.bordersClosed ? "imperium.msg.borders_closed" : "imperium.msg.borders_opened", n.name)
+                            .withStyle(n.bordersClosed ? ChatFormatting.RED : ChatFormatting.GREEN), false);
+                    d.markChanged();
+                }
                 case "stance" -> {
                     if (n == null) return;
                     MilitaryManager.setStance(level, n, t.getIntArray("ids"), Stance.byOrdinal(t.getInt("stance")));

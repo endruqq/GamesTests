@@ -5,6 +5,9 @@ import com.endruqq.imperium.client.Keys;
 import com.endruqq.imperium.client.RtsCamera;
 import com.endruqq.imperium.client.StrategicMap;
 import com.endruqq.imperium.client.UiUtil;
+import com.endruqq.imperium.client.ui.FlatButton;
+import com.endruqq.imperium.client.ui.Theme;
+import com.endruqq.imperium.game.building.BuildingCategory;
 import com.endruqq.imperium.entity.CitizenEntity;
 import com.endruqq.imperium.entity.OrderType;
 import com.endruqq.imperium.entity.SoldierEntity;
@@ -66,7 +69,7 @@ public class RtsScreen extends Screen {
     public static Placement placement;
     public static int editorProvince = -1;
 
-    private enum Tab { BUILD, ARMY, EDITOR }
+    private enum Tab { BUILD, ARMY, PEOPLE, EDITOR }
 
     private enum Tool { NONE, PAINT, ERASE, CORE }
 
@@ -82,15 +85,21 @@ public class RtsScreen extends Screen {
     private static boolean mapMode;
     private static Tab tab = Tab.BUILD;
     private static boolean prefabMode = true;
+    private static BuildingCategory category = null;
+    private static boolean patrolMode;
+    private static final List<Vec3> patrolPoints = new ArrayList<>();
     private static int editorNation = -1;
     private static int nationsCount = 4;
     private static int provincesCount = 4;
     private static Tool tool = Tool.NONE;
     private static double savedMapX = Double.NaN, savedMapZ, savedMapZoom;
 
-    private static final int PANEL_W = 268;
-    private static final int PANEL_H = 128;
+    private static final int PANEL_W = 292;
+    private static final int PANEL_H = 136;
     private static final int MINI = 116;
+    private static final int TOP = 20;
+    private static final int TOOL_W = 86;
+    private static final int CELL = 24;
 
     private final StrategicMap bigMap = new StrategicMap();
     private final StrategicMap miniMap = new StrategicMap();
@@ -112,6 +121,7 @@ public class RtsScreen extends Screen {
     private int infoProvince = -1;
     private EditBox nameBox;
     private Button stanceButton;
+    private Component topTip;
 
     public RtsScreen() {
         super(Component.translatable("imperium.ui.rts"));
@@ -127,7 +137,7 @@ public class RtsScreen extends Screen {
         if (!RtsCamera.active) RtsCamera.enter();
         panelX = 4;
         panelY = height - PANEL_H - 4;
-        bigMap.setRect(0, 18, width, height - 18);
+        bigMap.setRect(0, TOP, width, height - TOP);
         if (Double.isNaN(savedMapX)) {
             bigMap.fitArena(ClientState.data);
             if (!ClientState.data.arenaSet && minecraft.player != null) {
@@ -144,60 +154,93 @@ public class RtsScreen extends Screen {
             editorNation = ClientState.data.nations.isEmpty() ? -1 : ClientState.data.nations.keySet().iterator().next();
         }
 
-        // side buttons
-        int bx = width - 74, by = 20;
-        addRenderableWidget(Button.builder(Component.translatable("imperium.ui.btn.map"), b -> toggleMap()).bounds(bx, by, 70, 14).build());
-        addRenderableWidget(Button.builder(Component.translatable("imperium.ui.btn.tech"), b -> minecraft.setScreen(new TechTreeScreen(this))).bounds(bx, by + 16, 70, 14).build());
-        addRenderableWidget(Button.builder(Component.translatable("imperium.ui.btn.nation"), b -> minecraft.setScreen(new NationScreen(this, 0))).bounds(bx, by + 32, 70, 14).build());
-        addRenderableWidget(Button.builder(Component.translatable("imperium.ui.btn.diplomacy"), b -> minecraft.setScreen(new NationScreen(this, 1))).bounds(bx, by + 48, 70, 14).build());
-        addRenderableWidget(Button.builder(Component.translatable("imperium.ui.btn.exit"), b -> onClose()).bounds(bx, by + 64, 70, 14).build());
+        // side toolbar
+        int bx = width - TOOL_W - 4, by = TOP + 4;
+        Nation me = ClientState.myNation();
+        addRenderableWidget(FlatButton.of(bx, by, TOOL_W, 15, Component.translatable("imperium.ui.btn.map"), b -> toggleMap()).selected(mapMode));
+        addRenderableWidget(FlatButton.of(bx, by + 17, TOOL_W, 15, Component.translatable("imperium.ui.btn.tech"), b -> minecraft.setScreen(new TechTreeScreen(this))));
+        addRenderableWidget(FlatButton.of(bx, by + 34, TOOL_W, 15, Component.translatable("imperium.ui.btn.nation"), b -> minecraft.setScreen(new NationScreen(this, NationScreen.OVERVIEW))));
+        addRenderableWidget(FlatButton.of(bx, by + 51, TOOL_W, 15, Component.translatable("imperium.ui.btn.people"), b -> minecraft.setScreen(new NationScreen(this, NationScreen.PEOPLE))).enabled(me != null));
+        addRenderableWidget(FlatButton.of(bx, by + 68, TOOL_W, 15, Component.translatable("imperium.ui.btn.diplomacy"), b -> minecraft.setScreen(new NationScreen(this, NationScreen.DIPLOMACY))).enabled(me != null));
+        if (me != null) {
+            addRenderableWidget(FlatButton.of(bx, by + 85, TOOL_W, 15, Component.translatable(me.bordersClosed ? "imperium.ui.borders.closed_short" : "imperium.ui.borders.open_short"),
+                    me.bordersClosed ? FlatButton.Style.DANGER : FlatButton.Style.SUCCESS, b -> send("borders", new CompoundTag()))
+                    .tip(Component.translatable("imperium.ui.tip.borders")));
+        }
+        addRenderableWidget(FlatButton.of(bx, by + 102, TOOL_W, 15, Component.translatable("imperium.ui.btn.exit"), FlatButton.Style.GHOST, b -> onClose()));
 
         // tabs
         int tx = panelX;
         addRenderableWidget(tabButton(Tab.BUILD, "imperium.ui.tab.build", tx));
-        addRenderableWidget(tabButton(Tab.ARMY, "imperium.ui.tab.army", tx + 64));
-        if (ClientState.isAdmin()) addRenderableWidget(tabButton(Tab.EDITOR, "imperium.ui.tab.editor", tx + 128));
+        addRenderableWidget(tabButton(Tab.ARMY, "imperium.ui.tab.army", tx + 66));
+        addRenderableWidget(tabButton(Tab.PEOPLE, "imperium.ui.tab.people", tx + 132));
+        if (ClientState.isAdmin()) addRenderableWidget(tabButton(Tab.EDITOR, "imperium.ui.tab.editor", tx + 198));
         if (tab == Tab.EDITOR && !ClientState.isAdmin()) tab = Tab.BUILD;
 
         int px = panelX + 4, py = panelY + 4;
         switch (tab) {
             case BUILD -> {
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.prefab"), b -> {
+                addRenderableWidget(FlatButton.of(px, py, 70, 14, Component.translatable("imperium.ui.prefab"), b -> {
                     prefabMode = true;
                     rebuildWidgets();
-                }).bounds(px, py, 90, 14).build()).active = !prefabMode;
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.manual"), b -> {
+                }).selected(prefabMode).tip(Component.translatable("imperium.ui.prefab_hint")));
+                addRenderableWidget(FlatButton.of(px + 72, py, 70, 14, Component.translatable("imperium.ui.manual"), b -> {
                     prefabMode = false;
                     rebuildWidgets();
-                }).bounds(px + 92, py, 90, 14).build()).active = prefabMode;
+                }).selected(!prefabMode).tip(Component.translatable("imperium.ui.manual_hint")));
+                int cxp = px + 148;
+                BuildingCategory[] cats = {null, BuildingCategory.HOUSING, BuildingCategory.ECONOMY, BuildingCategory.SOCIETY, BuildingCategory.MILITARY};
+                for (BuildingCategory c : cats) {
+                    ItemStack icon = c == null ? new ItemStack(Items.COMPASS) : switch (c) {
+                        case HOUSING -> new ItemStack(Items.RED_BED);
+                        case ECONOMY -> new ItemStack(Items.WHEAT);
+                        case SOCIETY -> new ItemStack(Items.BELL);
+                        default -> new ItemStack(Items.IRON_SWORD);
+                    };
+                    Component tip = c == null ? Component.translatable("imperium.ui.category.all") : Component.translatable("imperium.category." + c.name().toLowerCase());
+                    addRenderableWidget(FlatButton.of(cxp, py, 26, 14, Component.empty(), b -> {
+                        category = c;
+                        rebuildWidgets();
+                    }).icon(icon).selected(category == c).tip(tip));
+                    cxp += 28;
+                }
             }
             case ARMY -> {
                 int oy = py + 44;
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.order.hold"), b -> order(OrderType.HOLD))
-                        .bounds(px, oy, 62, 14).build());
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.order.follow"), b -> order(OrderType.FOLLOW))
-                        .bounds(px + 64, oy, 62, 14).build());
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.order.return"), b -> order(OrderType.RETURN))
-                        .bounds(px + 128, oy, 62, 14).build());
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.order.dismiss"), b -> dismiss())
-                        .bounds(px + 192, oy, 64, 14).build());
-                stanceButton = addRenderableWidget(Button.builder(stanceLabel(), b -> cycleStance()).bounds(px, oy + 16, 126, 14).build());
-                addRenderableWidget(Button.builder(Component.translatable("imperium.ui.select_all"), b -> selectAll())
-                        .bounds(px + 128, oy + 16, 128, 14).build());
+                int ow = (PANEL_W - 8 - 4 * 3) / 5;
+                addRenderableWidget(FlatButton.of(px, oy, ow, 14, Component.translatable("imperium.ui.order.hold"), b -> order(OrderType.HOLD)));
+                addRenderableWidget(FlatButton.of(px + (ow + 3), oy, ow, 14, Component.translatable("imperium.ui.order.follow"), b -> order(OrderType.FOLLOW)));
+                addRenderableWidget(FlatButton.of(px + (ow + 3) * 2, oy, ow, 14, Component.translatable("imperium.ui.order.return"), b -> order(OrderType.RETURN)));
+                addRenderableWidget(FlatButton.of(px + (ow + 3) * 3, oy, ow, 14, Component.translatable("imperium.ui.order.patrol"), b -> togglePatrol())
+                        .selected(patrolMode).tip(Component.translatable("imperium.ui.tip.patrol")));
+                addRenderableWidget(FlatButton.of(px + (ow + 3) * 4, oy, ow, 14, Component.translatable("imperium.ui.order.dismiss"), FlatButton.Style.DANGER, b -> dismiss())
+                        .tip(Component.translatable("imperium.ui.dismiss_hint")));
+                stanceButton = addRenderableWidget(FlatButton.of(px, oy + 17, 140, 14, stanceLabel(), b -> cycleStance()));
+                addRenderableWidget(FlatButton.of(px + 143, oy + 17, PANEL_W - 8 - 143, 14, Component.translatable("imperium.ui.select_all"), b -> selectAll()));
+            }
+            case PEOPLE -> {
+                if (me != null) {
+                    addRenderableWidget(FlatButton.of(px, py + 92, 140, 15, Component.translatable("imperium.ui.people.hire_all"), FlatButton.Style.PRIMARY, b -> {
+                        CompoundTag t = new CompoundTag();
+                        t.putString("op", "auto");
+                        send("jobs", t);
+                    }).tip(Component.translatable("imperium.ui.tip.hire_all")));
+                    addRenderableWidget(FlatButton.of(px + 143, py + 92, PANEL_W - 8 - 143, 15, Component.translatable("imperium.ui.people.open_list"),
+                            b -> minecraft.setScreen(new NationScreen(this, NationScreen.PEOPLE))));
+                }
             }
             case EDITOR -> initEditor(px, py);
         }
     }
 
     private Button tabButton(Tab t, String key, int x) {
-        Button b = Button.builder(Component.translatable(key), btn -> {
+        return FlatButton.of(x, panelY - 15, 64, 15, Component.translatable(key), FlatButton.Style.TAB, btn -> {
             tab = t;
             placement = null;
             tool = Tool.NONE;
+            patrolMode = false;
             rebuildWidgets();
-        }).bounds(x, panelY - 15, 62, 14).build();
-        b.active = tab != t;
-        return b;
+        }).selected(tab == t);
     }
 
     private void initEditor(int px, int py) {
@@ -456,10 +499,47 @@ public class RtsScreen extends Screen {
     // ------------------------------------------------------------------ input
 
     private boolean overUi(double mx, double my) {
-        if (my < 18) return true;
+        if (my < TOP) return true;
         if (UiUtil.inside(mx, my, panelX, panelY - 16, PANEL_W, PANEL_H + 16)) return true;
-        if (UiUtil.inside(mx, my, width - 76, 18, 76, 82)) return true;
+        if (UiUtil.inside(mx, my, width - TOOL_W - 6, TOP, TOOL_W + 6, 126)) return true;
         return !mapMode && miniMap.contains(mx, my);
+    }
+
+    // ------------------------------------------------------------------ patrol
+
+    private void togglePatrol() {
+        patrolMode = !patrolMode && !SELECTION.isEmpty();
+        patrolPoints.clear();
+        if (patrolMode && minecraft.player != null) minecraft.player.displayClientMessage(Component.translatable("imperium.ui.patrol_hint"), true);
+        rebuildWidgets();
+    }
+
+    /** Adds a waypoint and (re)sends the patrol order. Shift keeps adding waypoints. */
+    private void patrolAt(Vec3 pos) {
+        if (SELECTION.isEmpty()) {
+            patrolMode = false;
+            return;
+        }
+        patrolPoints.add(pos);
+        CompoundTag t = new CompoundTag();
+        t.putIntArray("ids", selectionIds());
+        net.minecraft.nbt.ListTag l = new net.minecraft.nbt.ListTag();
+        for (Vec3 v : patrolPoints) {
+            CompoundTag p = new CompoundTag();
+            p.putDouble("x", v.x);
+            p.putDouble("y", v.y);
+            p.putDouble("z", v.z);
+            l.add(p);
+        }
+        t.put("points", l);
+        send("patrol", t);
+        orderMarker = pos;
+        orderMarkerTime = System.currentTimeMillis();
+        if (!hasShiftDown()) {
+            patrolMode = false;
+            patrolPoints.clear();
+            rebuildWidgets();
+        }
     }
 
     @Override
@@ -530,6 +610,11 @@ public class RtsScreen extends Screen {
 
     private void worldRightClick(double mx, double my) {
         if (SELECTION.isEmpty()) return;
+        if (patrolMode) {
+            BlockHitResult hit = RtsCamera.pickBlock(mx, my);
+            if (hit != null) patrolAt(new Vec3(hit.getLocation().x, hit.getBlockPos().getY() + 1, hit.getLocation().z));
+            return;
+        }
         Entity e = RtsCamera.pickEntity(mx, my);
         if (e != null && isEnemyEntity(e)) {
             orderAt(OrderType.ATTACK_TARGET, e.position(), e.getId(), -1);
@@ -561,6 +646,14 @@ public class RtsScreen extends Screen {
 
     private void mapOrder(StrategicMap map, double mx, double my, double wx, double wz) {
         if (SELECTION.isEmpty()) return;
+        if (patrolMode) {
+            double py = -1000;
+            if (minecraft.level != null && minecraft.level.hasChunkAt(BlockPos.containing(wx, 64, wz))) {
+                py = minecraft.level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(wx), Mth.floor(wz));
+            }
+            patrolAt(new Vec3(wx, py, wz));
+            return;
+        }
         Province core = coreNear(map, mx, my);
         int me = ClientState.myNationId();
         if (core != null && core.owner != me && (core.owner < 0 || ClientState.data.atWar(me, core.owner))) {
@@ -773,6 +866,12 @@ public class RtsScreen extends Screen {
                 placement = null;
                 return true;
             }
+            if (patrolMode) {
+                patrolMode = false;
+                patrolPoints.clear();
+                rebuildWidgets();
+                return true;
+            }
             if (tool != Tool.NONE) {
                 tool = Tool.NONE;
                 rebuildWidgets();
@@ -820,6 +919,7 @@ public class RtsScreen extends Screen {
             case GLFW.GLFW_KEY_V -> order(OrderType.FOLLOW);
             case GLFW.GLFW_KEY_B -> order(OrderType.RETURN);
             case GLFW.GLFW_KEY_T -> cycleStance();
+            case GLFW.GLFW_KEY_P -> togglePatrol();
             case GLFW.GLFW_KEY_R -> {
                 if (placement != null) placement.facing = placement.facing.getClockWise();
             }
@@ -860,14 +960,21 @@ public class RtsScreen extends Screen {
     // ------------------------------------------------------------------ panel (build / army) clicks
 
     private List<BuildingType> buildList() {
-        return new ArrayList<>(Buildings.all());
+        List<BuildingType> l = new ArrayList<>();
+        for (BuildingType t : Buildings.all()) if (category == null || t.category == category) l.add(t);
+        return l;
     }
 
     private int[] gridCell(int index) {
-        int cols = (PANEL_W - 8) / 22;
-        int gx = panelX + 4 + (index % cols) * 22;
-        int gy = panelY + 22 + (index / cols) * 22;
+        int cols = (PANEL_W - 8) / (CELL + 2);
+        int gx = panelX + 4 + (index % cols) * (CELL + 2);
+        int gy = panelY + 22 + (index / cols) * (CELL + 2);
         return new int[]{gx, gy};
+    }
+
+    private int[] unitCell(int i) {
+        int w = (PANEL_W - 8 - 4 * 3) / 5;
+        return new int[]{panelX + 4 + i * (w + 3), panelY + 4, w, 37};
     }
 
     private boolean handlePanelClick(double mx, double my, int button) {
@@ -877,7 +984,7 @@ public class RtsScreen extends Screen {
             List<BuildingType> list = buildList();
             for (int i = 0; i < list.size(); i++) {
                 int[] c = gridCell(i);
-                if (UiUtil.inside(mx, my, c[0], c[1], 20, 20)) {
+                if (UiUtil.inside(mx, my, c[0], c[1], CELL, CELL)) {
                     BuildingType t = list.get(i);
                     if (n == null) return true;
                     if (prefabMode && t.prefabCost == null) return true;
@@ -893,8 +1000,8 @@ public class RtsScreen extends Screen {
         } else if (tab == Tab.ARMY) {
             UnitType[] types = UnitType.values();
             for (int i = 0; i < types.length; i++) {
-                int x = panelX + 4 + i * 52, y = panelY + 6;
-                if (UiUtil.inside(mx, my, x, y, 50, 34)) {
+                int[] c = unitCell(i);
+                if (UiUtil.inside(mx, my, c[0], c[1], c[2], c[3])) {
                     recruit(types[i], hasShiftDown() ? 5 : 1);
                     return true;
                 }
@@ -924,7 +1031,8 @@ public class RtsScreen extends Screen {
             g.renderOutline(x0, y0, x1 - x0, y1 - y0, 0xFF66FF66);
         }
         renderOrderMarker(g);
-        renderTopBar(g, d, n);
+        renderPatrols(g);
+        renderTopBar(g, d, n, mx, my);
         renderPanel(g, d, n, mx, my);
         if (!mapMode) {
             if (d.arenaSet) {
@@ -986,9 +1094,20 @@ public class RtsScreen extends Screen {
             if (sel) {
                 g.renderOutline(x - bw / 2 - 3, y - 5, bw + 6, 10, 0xFFFFFFFF);
             }
-            if (s.getNationId() != me && me >= 0 && d.atWar(me, s.getNationId())) {
+            if (s.isSurrendered()) {
+                g.drawCenteredString(font, "⚑", x, y - 13, 0xFFFFFFFF);
+            } else if (s.getNationId() != me && me >= 0 && d.atWar(me, s.getNationId())) {
                 g.drawCenteredString(font, "⚔", x, y - 13, 0xFFFF4040);
             }
+        }
+        for (Entity e : minecraft.level.entitiesForRendering()) {
+            if (!(e instanceof CitizenEntity c) || c.getNationId() != me || me < 0) continue;
+            if (!c.hasState(CitizenEntity.TRAPPED) && !c.hasState(CitizenEntity.MOURNING)) continue;
+            if (c.distanceToSqr(RtsCamera.focusX, c.getY(), RtsCamera.focusZ) > 90 * 90) continue;
+            double[] p = RtsCamera.project(c.getX(), c.getY() + c.getBbHeight() + 0.4, c.getZ());
+            if (p == null) continue;
+            boolean trapped = c.hasState(CitizenEntity.TRAPPED);
+            g.drawCenteredString(font, trapped ? "⚠" : "✝", (int) p[0], (int) p[1] - 8, trapped ? 0xFFFF5050 : 0xFFAAAAAA);
         }
         for (Province p : d.provinces.values()) {
             if (p.core == null) continue;
@@ -1037,35 +1156,70 @@ public class RtsScreen extends Screen {
         g.renderOutline((int) p[0] - r, (int) p[1] - r, r * 2, r * 2, a << 24 | 0x40FF40);
     }
 
-    private void renderTopBar(GuiGraphics g, GameData d, Nation n) {
-        g.fill(0, 0, width, 18, 0xD0101418);
-        g.hLine(0, width, 18, 0xFF4A5260);
+    private void renderTopBar(GuiGraphics g, GameData d, Nation n, int mx, int my) {
+        g.fill(0, 0, width, TOP, 0xF0121720);
+        g.hLine(0, width, TOP, Theme.BORDER_LIGHT);
+        topTip = null;
         int x = 4;
         if (n == null) {
             Component c = d.phase == GamePhase.SETUP ? Component.translatable("imperium.ui.setup_bar") : Component.translatable("imperium.hud.no_nation");
-            g.drawString(font, c, x, 5, 0xFFFFD060);
+            UiUtil.text(g, font, c, x, 6, Theme.ACCENT);
             x += font.width(c) + 10;
         } else {
-            g.fill(x, 4, x + 10, 14, 0xFF000000 | n.rgb());
-            g.drawString(font, n.name, x + 13, 5, 0xFFFFFFFF);
-            x += 16 + font.width(n.name) + 8;
+            g.fill(x, 5, x + 10, 15, 0xFF000000 | n.rgb());
+            g.renderOutline(x, 5, 10, 10, 0xFF000000);
+            UiUtil.text(g, font, n.name, x + 14, 6, Theme.TEXT);
+            x += 14 + font.width(n.name) + 8;
             for (ResourceType t : ResourceType.values()) {
-                g.renderItem(t.icon(), x, 1);
-                String v = String.valueOf(n.stock.getInt(t));
-                g.drawString(font, v, x + 17, 5, t == ResourceType.FOOD && n.famine ? 0xFFFF5050 : 0xFFFFFFFF);
-                x += 17 + font.width(v) + 6;
+                String v = UiUtil.compact(n.stock.get(t));
+                int cw = 17 + font.width(v) + 4;
+                boolean hover = UiUtil.inside(mx, my, x - 1, 1, cw, TOP - 2);
+                if (hover) {
+                    g.fill(x - 1, 1, x - 1 + cw, TOP - 1, Theme.CARD_HOVER);
+                    topTip = Component.translatable("imperium.ui.tip.resource", t.label(), n.stock.getInt(t), UiUtil.signed(n.lastDelta.get(t)));
+                }
+                g.renderItem(t.icon(), x, 2);
+                double delta = n.lastDelta.get(t);
+                int col = t == ResourceType.FOOD && n.famine ? Theme.BAD : delta < -0.5 ? 0xFFFFB0A0 : Theme.TEXT;
+                UiUtil.text(g, font, v, x + 17, 6, col);
+                x += cw + 2;
             }
-            String extra = "☺" + (int) n.happiness + "%  ⌂" + n.population + "/" + n.housing + "  ⚔" + n.soldierCount + "/" + MilitaryManager.maxArmy(n)
-                    + "  ✦" + (int) n.research;
-            g.drawString(font, extra, x, 5, 0xFFB8E0FF);
-            x += font.width(extra) + 10;
+            x += 4;
+            g.vLine(x - 4, 3, TOP - 3, Theme.BORDER);
+            x = chip(g, x, "☺ " + (int) n.happiness + "%", n.happiness < 30 ? Theme.BAD : n.happiness > 70 ? Theme.GOOD : Theme.WARN, mx, my,
+                    Component.translatable("imperium.ui.tip.happiness", (int) n.happiness, (int) n.happinessTarget));
+            x = chip(g, x, "⌂ " + n.population + "/" + n.housing, n.population > n.housing ? Theme.BAD : Theme.TEXT, mx, my,
+                    Component.translatable("imperium.ui.tip.population", n.population, n.housing));
+            x = chip(g, x, "☻ " + n.citizenCount + "/" + n.citizenCap, Theme.PURPLE, mx, my,
+                    Component.translatable("imperium.ui.tip.citizens", n.citizenCount, n.citizenCap, n.employed, n.unemployed));
+            x = chip(g, x, "⚔ " + n.soldierCount + "/" + MilitaryManager.maxArmy(n), Theme.TEXT, mx, my,
+                    Component.translatable("imperium.ui.tip.army", n.soldierCount, MilitaryManager.maxArmy(n)));
+            x = chip(g, x, "✦ " + (int) n.research, Theme.INFO, mx, my,
+                    Component.translatable("imperium.ui.tip.research", (int) n.research, UiUtil.signed(n.researchDelta)));
+            if (n.trappedCount > 0 && (System.currentTimeMillis() / 500) % 2 == 0) {
+                x = chip(g, x, "⚠ " + n.trappedCount, Theme.BAD, mx, my, Component.translatable("imperium.ui.people.trapped", n.trappedCount));
+            }
         }
         Component phase;
+        int pcol = Theme.ACCENT;
         if (d.phase == GamePhase.RUNNING && d.inGracePeriod()) phase = Component.translatable("imperium.hud.grace", UiUtil.time(ClientState.graceSeconds()));
         else if (d.phase == GamePhase.ENDED && !d.winner.isEmpty()) phase = Component.translatable("imperium.ui.winner", d.winner);
-        else phase = Component.translatable(d.phase.key());
+        else if (n != null && d.atWarWithAnyone(n.id)) {
+            phase = Component.translatable("imperium.hud.at_war");
+            pcol = Theme.BAD;
+        } else phase = Component.translatable(d.phase.key());
         int pw = font.width(phase);
-        if (x + pw < width - 4) g.drawString(font, phase, width - pw - 4, 5, 0xFFFFD700);
+        if (x + pw < width - 8) UiUtil.text(g, font, phase, width - pw - 6, 6, pcol);
+    }
+
+    private int chip(GuiGraphics g, int x, String text, int color, int mx, int my, Component tip) {
+        int w = font.width(text) + 6;
+        if (UiUtil.inside(mx, my, x - 2, 1, w, TOP - 2)) {
+            g.fill(x - 2, 1, x - 2 + w, TOP - 1, Theme.CARD_HOVER);
+            topTip = tip;
+        }
+        UiUtil.text(g, font, text, x + 1, 6, color);
+        return x + w + 2;
     }
 
     private void renderPanel(GuiGraphics g, GameData d, Nation n, int mx, int my) {
@@ -1079,34 +1233,80 @@ public class RtsScreen extends Screen {
                 boolean noPrefab = prefabMode && t.prefabCost == null;
                 boolean affordable = n != null && (!prefabMode || (t.prefabCost != null && n.stock.has(t.prefabCost)));
                 boolean selected = placement != null && placement.type == t;
-                int bg = selected ? 0xFF3A6A3A : !unlocked || noPrefab ? 0xFF2A2A2A : affordable ? 0xFF34404E : 0xFF4E3434;
-                g.fill(c[0], c[1], c[0] + 20, c[1] + 20, bg);
-                g.renderOutline(c[0], c[1], 20, 20, UiUtil.inside(mx, my, c[0], c[1], 20, 20) ? 0xFFFFFFFF : 0xFF5A6270);
-                g.renderItem(t.icon(), c[0] + 2, c[1] + 2);
-                if (!unlocked || noPrefab) g.fill(c[0] + 1, c[1] + 1, c[0] + 19, c[1] + 19, 0xA0000000);
+                boolean hover = UiUtil.inside(mx, my, c[0], c[1], CELL, CELL);
+                int bg = selected ? Theme.CARD_SELECTED : hover ? Theme.CARD_HOVER : Theme.CARD;
+                g.fill(c[0], c[1], c[0] + CELL, c[1] + CELL, bg);
+                int border = selected ? Theme.ACCENT : !unlocked || noPrefab ? Theme.BORDER : affordable ? Theme.BORDER_LIGHT : 0xFF7A3A3A;
+                g.renderOutline(c[0], c[1], CELL, CELL, hover ? 0xFFFFFFFF : border);
+                g.renderItem(t.icon(), c[0] + 4, c[1] + 4);
+                if (!unlocked || noPrefab) {
+                    g.fill(c[0] + 1, c[1] + 1, c[0] + CELL - 1, c[1] + CELL - 1, 0xA0101418);
+                    if (!unlocked) UiUtil.text(g, font, "⊘", c[0] + CELL - 9, c[1] + 1, Theme.TEXT_MUTED);
+                } else if (!affordable) {
+                    g.fill(c[0] + 1, c[1] + CELL - 3, c[0] + CELL - 1, c[1] + CELL - 1, Theme.BAD);
+                }
                 if (n != null) {
                     int count = d.countActive(n.id, t.id);
-                    if (count > 0) g.drawString(font, String.valueOf(count), c[0] + 20 - font.width(String.valueOf(count)), c[1] + 12, 0xFFFFFFFF);
+                    if (count > 0) {
+                        String cs = String.valueOf(count);
+                        g.pose().pushPose();
+                        g.pose().translate(0, 0, 200);
+                        g.fill(c[0] + CELL - 2 - font.width(cs) - 2, c[1] + CELL - 11, c[0] + CELL - 1, c[1] + CELL - 2, 0xC0000000);
+                        UiUtil.text(g, font, cs, c[0] + CELL - 2 - font.width(cs), c[1] + CELL - 10, Theme.ACCENT);
+                        g.pose().popPose();
+                    }
                 }
             }
             Component hint = placement != null ? Component.translatable("imperium.ui.placing", placement.type.name())
                     : Component.translatable(prefabMode ? "imperium.ui.prefab_hint" : "imperium.ui.manual_hint");
-            g.drawWordWrap(font, hint, panelX + 4, panelY + 70, PANEL_W - 8, 0xFFBBBBBB);
+            int rows = (list.size() + (PANEL_W - 8) / (CELL + 2) - 1) / ((PANEL_W - 8) / (CELL + 2));
+            int hy = panelY + 24 + rows * (CELL + 2);
+            g.hLine(panelX + 4, panelX + PANEL_W - 4, hy - 1, Theme.BORDER);
+            g.drawWordWrap(font, hint, panelX + 4, hy + 2, PANEL_W - 8, Theme.TEXT_DIM);
         } else if (tab == Tab.ARMY) {
             UnitType[] types = UnitType.values();
             for (int i = 0; i < types.length; i++) {
                 UnitType t = types[i];
-                int x = panelX + 4 + i * 52, y = panelY + 6;
+                int[] c = unitCell(i);
                 Component err = n == null ? Component.empty() : MilitaryManager.canRecruit(d, n, t);
-                g.fill(x, y, x + 50, y + 34, err == null ? 0xFF34404E : 0xFF2A2A2A);
-                g.renderOutline(x, y, 50, 34, UiUtil.inside(mx, my, x, y, 50, 34) ? 0xFFFFFFFF : 0xFF5A6270);
-                g.renderItem(unitIcon(t), x + 17, y + 2);
-                g.drawCenteredString(font, UiUtil.trim(font, t.title().getString(), 48), x + 25, y + 22, err == null ? 0xFFFFFFFF : 0xFF888888);
+                boolean hover = UiUtil.inside(mx, my, c[0], c[1], c[2], c[3]);
+                UiUtil.card(g, c[0], c[1], c[2], c[3], hover && err == null);
+                if (err == null) g.fill(c[0] + 1, c[1] + 1, c[0] + c[2] - 1, c[1] + 3, Theme.GOOD);
+                g.renderItem(unitIcon(t), c[0] + c[2] / 2 - 8, c[1] + 5);
+                g.drawCenteredString(font, UiUtil.trim(font, t.title().getString(), c[2] - 4), c[0] + c[2] / 2, c[1] + 25, err == null ? Theme.TEXT : Theme.TEXT_MUTED);
             }
-            String army = n == null ? "-" : n.soldierCount + "/" + MilitaryManager.maxArmy(n);
-            g.drawString(font, Component.translatable("imperium.ui.army", army, SELECTION.size()), panelX + 4, panelY + 94, 0xFFDDDDDD);
-            g.drawString(font, Component.translatable("imperium.ui.army_hint"), panelX + 4, panelY + 106, 0xFF999999);
-            g.drawString(font, Component.translatable("imperium.ui.army_hint2"), panelX + 4, panelY + 116, 0xFF999999);
+            int army = n == null ? 0 : n.soldierCount, max = n == null ? 1 : MilitaryManager.maxArmy(n);
+            int iy = panelY + 82;
+            UiUtil.text(g, font, Component.translatable("imperium.ui.army", n == null ? "-" : army + "/" + max, SELECTION.size()), panelX + 4, iy, Theme.TEXT);
+            UiUtil.bar(g, panelX + 4, iy + 10, PANEL_W - 8, 3, army / (double) Math.max(1, max), Theme.BAD);
+            UiUtil.text(g, font, Component.translatable(patrolMode ? "imperium.ui.patrol_hint" : "imperium.ui.army_hint"), panelX + 4, iy + 17,
+                    patrolMode ? Theme.ACCENT : Theme.TEXT_DIM);
+            UiUtil.text(g, font, Component.translatable("imperium.ui.army_hint2"), panelX + 4, iy + 27, Theme.TEXT_MUTED);
+            int prisoners = 0;
+            for (Entity e : minecraft.level.entitiesForRendering()) {
+                if (e instanceof SoldierEntity s && s.isSurrendered() && n != null && s.getNationId() != n.id) prisoners++;
+            }
+            if (prisoners > 0) UiUtil.text(g, font, Component.translatable("imperium.ui.prisoners_near", prisoners), panelX + 4, iy + 37, Theme.WARN);
+        } else if (tab == Tab.PEOPLE) {
+            int px = panelX + 6, py = panelY + 6;
+            if (n == null) {
+                UiUtil.text(g, font, Component.translatable("imperium.hud.no_nation"), px, py, Theme.TEXT_DIM);
+                return;
+            }
+            UiUtil.section(g, font, px, py, PANEL_W - 12, Component.translatable("imperium.ui.tab.people"));
+            int y = py + 14;
+            UiUtil.text(g, font, Component.translatable("imperium.ui.people.citizens", n.citizenCount, n.citizenCap), px, y, Theme.PURPLE);
+            UiUtil.bar(g, px + 150, y + 2, PANEL_W - 162, 4, n.citizenCount / (double) Math.max(1, n.citizenCap), Theme.PURPLE);
+            y += 13;
+            UiUtil.text(g, font, Component.translatable("imperium.ui.people.employed", n.employed), px, y, Theme.GOOD);
+            UiUtil.text(g, font, Component.translatable("imperium.ui.people.unemployed", n.unemployed), px + 140, y, n.unemployed > 0 ? Theme.WARN : Theme.TEXT_DIM);
+            y += 11;
+            UiUtil.text(g, font, Component.translatable("imperium.ui.people.married", n.marriedCount / 2), px, y, 0xFFE07AB0);
+            UiUtil.text(g, font, Component.translatable("imperium.ui.people.mourning", n.mourningCount), px + 140, y, Theme.TEXT_DIM);
+            y += 11;
+            UiUtil.text(g, font, Component.translatable("imperium.ui.people.trapped", n.trappedCount), px, y, n.trappedCount > 0 ? Theme.BAD : Theme.TEXT_DIM);
+            y += 13;
+            g.drawWordWrap(font, Component.translatable("imperium.ui.people.hint"), px, y, PANEL_W - 12, Theme.TEXT_MUTED);
         } else if (tab == Tab.EDITOR) {
             Nation en = d.nation(editorNation);
             int px = panelX + 4, py = panelY + 4;
@@ -1117,7 +1317,7 @@ public class RtsScreen extends Screen {
             g.fill(px + 13, py + 66, px + 99, py + 80, 0xFF333333);
             g.drawCenteredString(font, UiUtil.trim(font, ep == null ? "-" : ep.name, 84), px + 56, py + 69, 0xFFFFFFFF);
             String arena = d.arenaSet ? d.size + "x" + d.size + " @ " + d.centerX + "," + d.centerZ : "-";
-            g.drawString(font, Component.translatable("imperium.ui.editor.status", arena, Component.translatable(d.phase.key())), px, py + 118, 0xFF999999);
+            g.drawString(font, Component.translatable("imperium.ui.editor.status", arena, Component.translatable(d.phase.key())), px, py + 120, Theme.TEXT_DIM);
         }
     }
 
@@ -1142,35 +1342,37 @@ public class RtsScreen extends Screen {
             hp += u.hp;
             n++;
         }
-        int x = width - MINI - 8 - 120, y = height - 4 - 14 - counts.size() * 10;
-        if (mapMode) x = width - 124;
-        UiUtil.panel(g, x, y - 4, 120, 18 + counts.size() * 10);
-        g.drawString(font, Component.translatable("imperium.ui.selected", SELECTION.size()), x + 4, y, 0xFFFFFFFF);
-        int yy = y + 10;
+        int w = 126;
+        int x = width - MINI - 10 - w, y = height - 4 - 20 - counts.size() * 10;
+        if (mapMode) x = width - w - 4;
+        UiUtil.panel(g, x, y - 4, w, 24 + counts.size() * 10);
+        UiUtil.text(g, font, Component.translatable("imperium.ui.selected", SELECTION.size()), x + 5, y, Theme.ACCENT);
+        int yy = y + 11;
         for (Map.Entry<UnitType, Integer> e : counts.entrySet()) {
-            g.drawString(font, e.getValue() + "× " + e.getKey().title().getString(), x + 4, yy, 0xFFCCCCCC);
+            UiUtil.icon10(g, unitIcon(e.getKey()), x + 5, yy - 1);
+            UiUtil.text(g, font, e.getValue() + "× " + e.getKey().title().getString(), x + 18, yy, Theme.TEXT_DIM);
             yy += 10;
         }
-        if (n > 0) {
-            double f = hp / n;
-            g.fill(x + 4, yy, x + 116, yy + 2, 0xFF400000);
-            g.fill(x + 4, yy, x + 4 + (int) (112 * f), yy + 2, 0xFF30D030);
-        }
+        if (n > 0) UiUtil.bar(g, x + 5, yy + 2, w - 10, 3, hp / n, hp / n > 0.5 ? Theme.GOOD : hp / n > 0.25 ? Theme.WARN : Theme.BAD);
     }
 
     private void renderNotes(GuiGraphics g) {
         long now = System.currentTimeMillis();
-        int y = 22;
+        int y = TOP + 6;
         int shown = 0;
         for (ClientState.Note note : ClientState.NOTES) {
             long age = now - note.time();
             if (age > 12000 || shown >= 4) continue;
             int alpha = age > 10000 ? (int) (255 * (12000 - age) / 2000.0) : 255;
             if (alpha < 8) continue;
-            String s = UiUtil.trim(font, note.text().getString(), width - 100);
-            g.fill(2, y - 2, 8 + font.width(s), y + 10, (alpha / 2) << 24);
-            g.drawString(font, s, 5, y, (alpha << 24) | (note.important() ? 0xFFD700 : 0xFFFFFF));
-            y += 13;
+            String s = UiUtil.trim(font, note.text().getString(), Math.min(360, width - TOOL_W - 40));
+            int w = font.width(s) + 12;
+            int slide = age < 200 ? (int) ((200 - age) / 10) : 0;
+            int x = 4 - slide;
+            g.fill(x, y - 3, x + w, y + 10, Theme.alpha(Theme.PANEL_SOLID, alpha * 220 / 255));
+            g.fill(x, y - 3, x + 2, y + 10, Theme.alpha(note.important() ? Theme.ACCENT : Theme.INFO, alpha));
+            g.drawString(font, s, x + 7, y, (Math.max(8, alpha) << 24) | (note.important() ? 0xFFE7B0 : 0xE8ECF1), false);
+            y += 15;
             shown++;
         }
     }
@@ -1178,13 +1380,43 @@ public class RtsScreen extends Screen {
     private void renderHints(GuiGraphics g, Nation n) {
         Component hint;
         if (tool != Tool.NONE) hint = Component.translatable("imperium.ui.hint.editor");
+        else if (patrolMode) hint = Component.translatable("imperium.ui.hint.patrol");
         else if (placement != null) hint = Component.translatable("imperium.ui.hint.place");
         else if (mapMode) hint = Component.translatable("imperium.ui.hint.map");
         else hint = Component.translatable("imperium.ui.hint.world");
         int w = font.width(hint);
         int x = Math.max(PANEL_W + 10, width / 2 - w / 2);
         if (x + w > width - MINI - 10) return;
-        g.drawString(font, hint, x, height - 12, 0xFFCCCCCC);
+        g.fill(x - 4, height - 15, x + w + 4, height - 3, Theme.alpha(Theme.PANEL_SOLID, 0xB0));
+        UiUtil.text(g, font, hint, x, height - 13, patrolMode ? Theme.ACCENT : Theme.TEXT_DIM);
+    }
+
+    /** Patrol routes of the selected soldiers, as dotted lines. */
+    private void renderPatrols(GuiGraphics g) {
+        if (minecraft.level == null || SELECTION.isEmpty()) return;
+        int done = 0;
+        for (int id : SELECTION) {
+            if (done > 12) break;
+            if (!(minecraft.level.getEntity(id) instanceof SoldierEntity s)) continue;
+            List<Vec3> route = s.clientPatrol();
+            if (route.size() < 2) continue;
+            done++;
+            for (int i = 0; i + 1 < route.size(); i++) {
+                Vec3 a = route.get(i), b = route.get(i + 1);
+                double len = a.distanceTo(b);
+                int steps = Math.max(2, (int) (len / (mapMode ? 4 : 1.5)));
+                for (int k = 0; k <= steps; k++) {
+                    Vec3 p = a.lerp(b, k / (double) steps);
+                    double[] sp = mapMode ? new double[]{bigMap.toScreenX(p.x), bigMap.toScreenY(p.z)} : RtsCamera.project(p.x, p.y + 0.15, p.z);
+                    if (sp == null) continue;
+                    g.fill((int) sp[0] - 1, (int) sp[1] - 1, (int) sp[0] + 1, (int) sp[1] + 1, 0xC0E3B341);
+                }
+            }
+            for (Vec3 p : route) {
+                double[] sp = mapMode ? new double[]{bigMap.toScreenX(p.x), bigMap.toScreenY(p.z)} : RtsCamera.project(p.x, p.y + 0.2, p.z);
+                if (sp != null) g.renderOutline((int) sp[0] - 3, (int) sp[1] - 3, 6, 6, 0xFFE3B341);
+            }
+        }
     }
 
     private void renderTooltips(GuiGraphics g, GameData d, Nation n, int mx, int my) {
@@ -1193,14 +1425,17 @@ public class RtsScreen extends Screen {
             List<BuildingType> list = buildList();
             for (int i = 0; i < list.size(); i++) {
                 int[] c = gridCell(i);
-                if (UiUtil.inside(mx, my, c[0], c[1], 20, 20)) buildingTooltip(lines, list.get(i), n);
+                if (UiUtil.inside(mx, my, c[0], c[1], CELL, CELL)) buildingTooltip(lines, list.get(i), n);
             }
         } else if (tab == Tab.ARMY) {
             UnitType[] types = UnitType.values();
             for (int i = 0; i < types.length; i++) {
-                int x = panelX + 4 + i * 52, y = panelY + 6;
-                if (UiUtil.inside(mx, my, x, y, 50, 34)) unitTooltip(lines, types[i], d, n);
+                int[] c = unitCell(i);
+                if (UiUtil.inside(mx, my, c[0], c[1], c[2], c[3])) unitTooltip(lines, types[i], d, n);
             }
+        }
+        if (lines.isEmpty() && topTip != null) {
+            for (String part : topTip.getString().split("\n")) add(lines, Component.literal(part));
         }
         if (lines.isEmpty() && placement != null && placement.error != null && !overUi(mx, my)) {
             lines.add(placement.error.copy().withStyle(ChatFormatting.RED).getVisualOrderText());
@@ -1211,10 +1446,15 @@ public class RtsScreen extends Screen {
             if (hoverEntity instanceof SoldierEntity s) {
                 nat = s.getNationId();
                 add(lines, s.getUnitType().title().copy().withStyle(ChatFormatting.GRAY));
-                add(lines, Component.translatable(s.getOrder().key()).withStyle(ChatFormatting.DARK_AQUA));
+                if (s.isSurrendered()) add(lines, Component.translatable("imperium.ui.prisoner").withStyle(ChatFormatting.YELLOW));
+                else add(lines, Component.translatable(s.getOrder().key()).withStyle(ChatFormatting.DARK_AQUA));
             } else if (hoverEntity instanceof CitizenEntity c) {
                 nat = c.getNationId();
                 add(lines, c.getProfession().title().copy().withStyle(ChatFormatting.GRAY));
+                if (c.hasState(CitizenEntity.TRAPPED)) add(lines, Component.translatable("imperium.ui.state.trapped").withStyle(ChatFormatting.RED));
+                if (c.hasState(CitizenEntity.MOURNING)) add(lines, Component.translatable("imperium.ui.state.mourning").withStyle(ChatFormatting.DARK_GRAY));
+                if (c.hasState(CitizenEntity.MARRIED)) add(lines, Component.translatable("imperium.ui.state.married").withStyle(ChatFormatting.LIGHT_PURPLE));
+                if (c.hasState(CitizenEntity.WORKING)) add(lines, Component.translatable("imperium.ui.state.working").withStyle(ChatFormatting.GREEN));
             } else if (hoverEntity instanceof Player p) {
                 nat = d.nationIdOf(p.getUUID());
             }

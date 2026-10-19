@@ -109,9 +109,13 @@ public final class Treasury {
             case IRON -> item = Items.IRON_INGOT;
             case GOLD -> item = Items.GOLD_INGOT;
             case STEEL -> item = ModItems.STEEL_INGOT.get();
-            default -> {
+            case FOOD -> {
                 item = Items.BREAD;
                 per = 5;
+            }
+            default -> {
+                p.displayClientMessage(Component.translatable("imperium.err.not_withdrawable").withStyle(ChatFormatting.RED), true);
+                return;
             }
         }
         int items = Math.min(amount, (int) Math.floor(n.stock.get(type) / per));

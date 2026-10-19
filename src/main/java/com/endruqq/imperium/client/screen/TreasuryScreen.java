@@ -34,9 +34,10 @@ public class TreasuryScreen extends Screen {
         top = height / 2 - 90;
         int y = top + 28;
         for (ResourceType t : ResourceType.values()) {
+            if (t == ResourceType.GOODS) continue;
             int x = left + 120;
             for (int amount : new int[]{1, 16, 64}) {
-                addRenderableWidget(Button.builder(Component.literal("-" + amount), b -> withdraw(t, amount)).bounds(x, y, 40, 14).build());
+                addRenderableWidget(com.endruqq.imperium.client.ui.FlatButton.of(x, y, 40, 14, Component.literal("-" + amount), b -> withdraw(t, amount)));
                 x += 42;
             }
             y += 20;
@@ -53,7 +54,7 @@ public class TreasuryScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        g.fill(0, 0, width, height, com.endruqq.imperium.client.ui.Theme.SCRIM);
         UiUtil.panelLight(g, left, top, 260, 180);
         Nation n = ClientState.myNation();
         g.drawCenteredString(font, title, left + 130, top + 8, 0xFFFFD700);
@@ -64,6 +65,7 @@ public class TreasuryScreen extends Screen {
         }
         int y = top + 28;
         for (ResourceType t : ResourceType.values()) {
+            if (t == ResourceType.GOODS) continue;
             g.renderItem(t.icon(), left + 8, y - 2);
             g.drawString(font, t.label(), left + 28, y + 3, 0xFFFFFFFF);
             g.drawString(font, String.valueOf(n.stock.getInt(t)), left + 84, y + 3, 0xFFFFE080);

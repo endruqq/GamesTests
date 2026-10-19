@@ -56,6 +56,18 @@ public final class ClientPacketHandler {
             }
             case "open_treasury" -> mc.setScreen(new TreasuryScreen(BlockPos.of(p.data.getLong("pos"))));
             case "editor_province" -> RtsScreen.editorProvince = p.data.getInt("province");
+            case "people" -> {
+                java.util.List<ClientState.PersonInfo> list = new java.util.ArrayList<>();
+                net.minecraft.nbt.ListTag l = p.data.getList("people", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                for (int i = 0; i < l.size(); i++) {
+                    net.minecraft.nbt.CompoundTag e = l.getCompound(i);
+                    list.add(new ClientState.PersonInfo(e.getUUID("id"), e.getString("name"), e.getBoolean("female"), e.getInt("job"),
+                            e.getString("work"), e.getString("spouse"), e.getInt("children"), e.getLong("mourning"), e.getString("mourningFor"),
+                            e.getLong("trapped")));
+                }
+                ClientState.people = list;
+                ClientState.peopleVersion++;
+            }
             default -> {
             }
         }

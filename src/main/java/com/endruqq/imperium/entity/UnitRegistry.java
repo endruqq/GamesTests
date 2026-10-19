@@ -53,6 +53,16 @@ public final class UnitRegistry {
         return l;
     }
 
+    public static CitizenEntity citizen(java.util.UUID id) {
+        for (CitizenEntity c : CITIZENS) if (c.getUUID().equals(id) && c.isAlive() && !c.isRemoved()) return c;
+        return null;
+    }
+
+    public static SoldierEntity soldier(java.util.UUID id) {
+        for (SoldierEntity s : SOLDIERS) if (s.getUUID().equals(id) && s.isAlive() && !s.isRemoved()) return s;
+        return null;
+    }
+
     public static void clear() {
         SOLDIERS.clear();
         CITIZENS.clear();

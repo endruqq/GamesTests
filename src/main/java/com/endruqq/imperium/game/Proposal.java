@@ -4,7 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 
 public class Proposal {
     public enum Type {
-        PEACE, ALLIANCE, NON_AGGRESSION, TRADE, TRIBUTE;
+        PEACE, ALLIANCE, NON_AGGRESSION, TRADE, TRIBUTE, ACCESS, PROVINCE, CALL_TO_ARMS, PEACE_PROVINCE, PEACE_GOLD;
 
         public String key() {
             return "imperium.proposal." + name().toLowerCase();

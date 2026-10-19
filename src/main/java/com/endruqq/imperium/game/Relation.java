@@ -14,6 +14,16 @@ public class Relation {
     public int opinionAB;
     /** opinion of b about a */
     public int opinionBA;
+    /** military access: soldiers may cross each other's closed borders */
+    public boolean access;
+    /** a guarantees the independence of b */
+    public boolean guaranteeAB;
+    /** b guarantees the independence of a */
+    public boolean guaranteeBA;
+    /** war score of a and b in the current war */
+    public int scoreA;
+    public int scoreB;
+    public long lastDenounce = -100000;
 
     public Relation(int a, int b) {
         this.a = Math.min(a, b);
@@ -36,6 +46,26 @@ public class Relation {
         else if (who == b && about == a) opinionBA = clamp(opinionBA + delta);
     }
 
+    public boolean guarantees(int who, int about) {
+        if (who == a && about == b) return guaranteeAB;
+        if (who == b && about == a) return guaranteeBA;
+        return false;
+    }
+
+    public void setGuarantee(int who, int about, boolean v) {
+        if (who == a && about == b) guaranteeAB = v;
+        else if (who == b && about == a) guaranteeBA = v;
+    }
+
+    public int scoreOf(int who) {
+        return who == a ? scoreA : who == b ? scoreB : 0;
+    }
+
+    public void addScore(int who, int delta) {
+        if (who == a) scoreA = Math.max(0, scoreA + delta);
+        else if (who == b) scoreB = Math.max(0, scoreB + delta);
+    }
+
     private static int clamp(int v) {
         return Math.max(-100, Math.min(100, v));
     }
@@ -50,6 +80,12 @@ public class Relation {
         t.putLong("since", since);
         t.putInt("oab", opinionAB);
         t.putInt("oba", opinionBA);
+        t.putBoolean("access", access);
+        t.putBoolean("gab", guaranteeAB);
+        t.putBoolean("gba", guaranteeBA);
+        t.putInt("sa", scoreA);
+        t.putInt("sb", scoreB);
+        t.putLong("denounce", lastDenounce);
         return t;
     }
 
@@ -61,6 +97,12 @@ public class Relation {
         r.since = t.getLong("since");
         r.opinionAB = t.getInt("oab");
         r.opinionBA = t.getInt("oba");
+        r.access = t.getBoolean("access");
+        r.guaranteeAB = t.getBoolean("gab");
+        r.guaranteeBA = t.getBoolean("gba");
+        r.scoreA = t.getInt("sa");
+        r.scoreB = t.getInt("sb");
+        if (t.contains("denounce")) r.lastDenounce = t.getLong("denounce");
         return r;
     }
 }

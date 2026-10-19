@@ -26,13 +26,15 @@ public final class BotAI {
     private static final Tech[] RESEARCH_ORDER = {
             Tech.AGRICULTURE, Tech.MINING, Tech.WRITING, Tech.ARCHERY, Tech.METALLURGY, Tech.TRADE, Tech.FORTIFICATION,
             Tech.ARCHITECTURE, Tech.DIPLOMACY, Tech.RELIGION, Tech.STEEL_WEAPONS, Tech.SIEGE, Tech.MEDICINE, Tech.BANKING,
-            Tech.TACTICS, Tech.INDUSTRY, Tech.ADMINISTRATION, Tech.GUNPOWDER, Tech.GUILDS, Tech.MILITARY_SERVICE, Tech.ENLIGHTENMENT
+            Tech.TACTICS, Tech.INDUSTRY, Tech.ADMINISTRATION, Tech.GUNPOWDER, Tech.GUILDS, Tech.MILITARY_SERVICE, Tech.ENLIGHTENMENT,
+            Tech.URBANIZATION, Tech.MASS_PRODUCTION, Tech.ESPIONAGE
     };
     private static final Object[][] BUILD_ORDER = {
             {Buildings.LUMBER_MILL, 2}, {Buildings.MINE, 2}, {Buildings.ACADEMY, 1}, {Buildings.TAVERN, 1}, {Buildings.MARKET, 1},
             {Buildings.SMELTERY, 1}, {Buildings.GRANARY, 1}, {Buildings.ARCHERY_RANGE, 1}, {Buildings.TEMPLE, 1},
             {Buildings.WATCHTOWER, 1}, {Buildings.ARMORY, 1}, {Buildings.HOSPITAL, 1}, {Buildings.FORTRESS, 1},
-            {Buildings.SIEGE_WORKSHOP, 1}, {Buildings.BANK, 1}, {Buildings.FARM, 4}, {Buildings.MARKET, 2}, {Buildings.ACADEMY, 2}
+            {Buildings.SIEGE_WORKSHOP, 1}, {Buildings.FACTORY, 1}, {Buildings.BANK, 1}, {Buildings.FARM, 4}, {Buildings.MARKET, 2},
+            {Buildings.ACADEMY, 2}, {Buildings.FACTORY, 2}
     };
 
     private BotAI() {}
@@ -60,6 +62,8 @@ public final class BotAI {
         army(level, d, n);
         diplomacy(level, d, n, neighbours, rnd);
         war(level, d, n);
+        borders(d, n, neighbours);
+        PrisonerManager.botCycle(level, d, n);
         if (n.stock.get(ResourceType.FOOD) < n.population * 2 && n.tax != TaxLevel.LOW) n.tax = TaxLevel.LOW;
         else if (n.happiness > 75 && n.tax == TaxLevel.LOW) n.tax = TaxLevel.NORMAL;
     }
@@ -157,7 +161,20 @@ public final class BotAI {
 
     // ------------------------------------------------------------------ diplomacy
 
-    private static Map<Integer, Set<Integer>> neighbours(GameData d) {
+    /** Close the borders in war or among hostile neighbours, open them when friendly. */
+    private static void borders(GameData d, Nation n, Set<Integer> neighbours) {
+        boolean hostile = d.atWarWithAnyone(n.id);
+        for (int id : neighbours) {
+            Relation r = d.relation(n.id, id);
+            if (r != null && r.opinionOf(n.id, id) < -30) hostile = true;
+        }
+        if (n.bordersClosed != hostile) {
+            n.bordersClosed = hostile;
+            d.markChanged();
+        }
+    }
+
+    public static Map<Integer, Set<Integer>> neighbours(GameData d) {
         Map<Integer, Set<Integer>> m = new HashMap<>();
         int n = d.gridN;
         for (int z = 0; z < n; z++) {
@@ -198,8 +215,21 @@ public final class BotAI {
             for (Nation e : enemies) {
                 double theirs = strength(d, e);
                 boolean losing = theirs > mine * 1.4 || d.gameTick - n.lastProvinceLostTick < 20 * 60 * 3;
-                if ((losing || n.warCycles > 45) && rnd.nextInt(4) == 0) {
-                    DiplomacyManager.perform(level.getServer(), d, n.id, e.id, DiplomacyManager.Action.PROPOSE_PEACE);
+                Relation wr = d.relation(n.id, e.id);
+                int lead = wr.scoreOf(n.id) - wr.scoreOf(e.id);
+                if (lead >= 25 && rnd.nextInt(3) == 0) {
+                    DiplomacyManager.perform(level.getServer(), d, n.id, e.id, DiplomacyManager.Action.PEACE_PROVINCE);
+                } else if ((losing || n.warCycles > 45) && rnd.nextInt(4) == 0) {
+                    boolean rich = n.stock.get(ResourceType.GOLD) > DiplomacyManager.PEACE_GOLD * 2;
+                    DiplomacyManager.perform(level.getServer(), d, n.id, e.id, rich && losing ? DiplomacyManager.Action.PEACE_GOLD
+                            : DiplomacyManager.Action.PROPOSE_PEACE);
+                } else if (theirs > mine && rnd.nextInt(6) == 0) {
+                    for (Nation ally : d.nations.values()) {
+                        if (!ally.eliminated && d.allied(n.id, ally.id) && !d.atWar(ally.id, e.id)) {
+                            DiplomacyManager.perform(level.getServer(), d, n.id, ally.id, DiplomacyManager.Action.CALL_TO_ARMS);
+                            break;
+                        }
+                    }
                 }
             }
             return;
@@ -220,8 +250,30 @@ public final class BotAI {
                 victim = o;
             }
         }
-        if (victim != null && mine > victimStrength * 1.35 && n.soldierCount >= 5 && rnd.nextInt(6) == 0) {
-            DiplomacyManager.perform(level.getServer(), d, n.id, victim.id, DiplomacyManager.Action.DECLARE_WAR);
+        // a neighbour we have a good reason to fight is a much more tempting target
+        Nation justified = null;
+        for (int id : neighbours) {
+            Nation o = d.nation(id);
+            if (o == null || o.eliminated) continue;
+            Relation r = d.relation(n.id, o.id);
+            if (r.type != RelationType.PEACE || d.gameTick < r.truceUntil) continue;
+            if (WarReasons.justified(d, n.id, o.id) && mine > strength(d, o) * 1.1) {
+                justified = o;
+                break;
+            }
+        }
+        if (justified != null && n.soldierCount >= 5 && rnd.nextInt(4) == 0) {
+            DiplomacyManager.perform(level.getServer(), d, n.id, justified.id, DiplomacyManager.Action.DECLARE_WAR);
+            return;
+        }
+        if (victim != null && mine > victimStrength * 1.6 && n.soldierCount >= 6 && rnd.nextInt(10) == 0) {
+            if (n.has(Tech.ESPIONAGE) && WarReasons.claimInProgress(d, n.id, victim.id) == null && n.stock.get(ResourceType.GOLD) > 120) {
+                DiplomacyManager.perform(level.getServer(), d, n.id, victim.id, DiplomacyManager.Action.FABRICATE_CLAIM);
+            } else if (mine > victimStrength * 2.2 && rnd.nextBoolean()) {
+                DiplomacyManager.perform(level.getServer(), d, n.id, victim.id, DiplomacyManager.Action.DEMAND_PROVINCE);
+            } else {
+                DiplomacyManager.perform(level.getServer(), d, n.id, victim.id, DiplomacyManager.Action.DECLARE_WAR);
+            }
             return;
         }
         // friendship
@@ -235,8 +287,13 @@ public final class BotAI {
                 DiplomacyManager.perform(level.getServer(), d, n.id, o.id, DiplomacyManager.Action.PROPOSE_ALLIANCE);
             } else if (n.has(Tech.DIPLOMACY) && r.type == RelationType.PEACE && strength(d, o) > mine * 1.3 && rnd.nextInt(10) == 0) {
                 DiplomacyManager.perform(level.getServer(), d, n.id, o.id, DiplomacyManager.Action.PROPOSE_NAP);
+            } else if (r.type != RelationType.WAR && !r.access && op > 15 && rnd.nextInt(12) == 0) {
+                DiplomacyManager.perform(level.getServer(), d, n.id, o.id, DiplomacyManager.Action.PROPOSE_ACCESS);
+            } else if (o.famine && op > 0 && n.stock.get(ResourceType.FOOD) > 250 && rnd.nextInt(6) == 0) {
+                DiplomacyManager.perform(level.getServer(), d, n.id, o.id, DiplomacyManager.Action.SEND_FOOD);
             } else if (op < -40 && rnd.nextInt(25) == 0) {
-                DiplomacyManager.perform(level.getServer(), d, n.id, o.id, DiplomacyManager.Action.INSULT);
+                DiplomacyManager.perform(level.getServer(), d, n.id, o.id, rnd.nextBoolean() ? DiplomacyManager.Action.INSULT
+                        : DiplomacyManager.Action.DENOUNCE);
             }
         }
     }
@@ -252,6 +309,29 @@ public final class BotAI {
             case NON_AGGRESSION -> op > -10 || theirs > mine;
             case TRADE -> op > -20;
             case TRIBUTE -> theirs > mine * 1.6 && bot.stock.get(ResourceType.GOLD) >= p.amount;
+            case ACCESS -> op > 5 || d.allied(bot.id, from.id);
+            case PROVINCE -> {
+                Province pr = d.provinces.get(p.amount);
+                boolean capital = pr != null && bot.capitalProvince == pr.id;
+                yield !capital && theirs > mine * 2.2 && op > -60;
+            }
+            case CALL_TO_ARMS -> {
+                Nation enemy = d.nation(p.amount);
+                double es = enemy == null ? 0 : strength(d, enemy);
+                yield op > 5 && (mine + theirs > es * 1.2 || (enemy != null && d.relation(bot.id, enemy.id).opinionOf(bot.id, enemy.id) < -20));
+            }
+            case PEACE_PROVINCE -> {
+                Relation wr = d.relation(bot.id, from.id);
+                int lead = wr.scoreOf(from.id) - wr.scoreOf(bot.id);
+                Province pr = d.provinces.get(p.amount);
+                boolean capital = pr != null && bot.capitalProvince == pr.id;
+                yield !capital && (lead >= 20 || theirs > mine * 1.8);
+            }
+            case PEACE_GOLD -> {
+                Relation wr = d.relation(bot.id, from.id);
+                int lead = wr.scoreOf(bot.id) - wr.scoreOf(from.id);
+                yield lead < 20 || bot.warCycles > 20;
+            }
         };
     }
 
@@ -263,7 +343,8 @@ public final class BotAI {
     // ------------------------------------------------------------------ war
 
     private static void war(ServerLevel level, GameData d, Nation n) {
-        List<SoldierEntity> army = UnitRegistry.soldiersOf(n.id);
+        List<SoldierEntity> army = new ArrayList<>(UnitRegistry.soldiersOf(n.id));
+        army.removeIf(SoldierEntity::isSurrendered);
         if (army.isEmpty()) return;
         // defend provinces under attack
         for (Province p : d.provincesOf(n.id)) {
@@ -276,15 +357,32 @@ public final class BotAI {
         }
         List<Nation> enemies = d.enemiesOf(n.id);
         if (enemies.isEmpty()) {
-            // peace time: send units that wandered off back to barracks
+            // peace time: send units that wandered off back to barracks, keep a patrol between the capital and a border province
             for (SoldierEntity s : army) {
                 if (s.getOrder() == OrderType.ATTACK_CORE) s.order(OrderType.RETURN, s.position(), null, -1);
+            }
+            long patrolling = army.stream().filter(s -> s.getOrder() == OrderType.PATROL).count();
+            Province cap = d.provinces.get(n.capitalProvince);
+            List<Province> own = d.provincesOf(n.id);
+            if (patrolling < 2 && army.size() >= 4 && cap != null && cap.core != null && own.size() > 1) {
+                Province far = own.get(level.random.nextInt(own.size()));
+                if (far.core != null && far.id != cap.id) {
+                    List<Vec3> route = List.of(Vec3.atBottomCenterOf(cap.core.offset(0, 0, 6)), Vec3.atBottomCenterOf(far.core.offset(0, 0, 6)));
+                    int sent = 0;
+                    for (SoldierEntity s : army) {
+                        if (s.getOrder() == OrderType.HOLD && sent < 2) {
+                            s.patrol(route);
+                            sent++;
+                        }
+                    }
+                }
             }
             return;
         }
         List<SoldierEntity> idle = new ArrayList<>();
         for (SoldierEntity s : army) {
-            if (s.getOrder() == OrderType.HOLD || s.getOrder() == OrderType.RETURN) idle.add(s);
+            if (s.isSurrendered()) continue;
+            if (s.getOrder() == OrderType.HOLD || s.getOrder() == OrderType.RETURN || s.getOrder() == OrderType.PATROL) idle.add(s);
         }
         if (idle.size() < 4) return;
         Province cap = d.provinces.get(n.capitalProvince);

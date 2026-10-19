@@ -8,8 +8,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.UUID;
 
 /** Client mirror of the game state. */
 public final class ClientState {
@@ -23,6 +25,14 @@ public final class ClientState {
 
     public record Note(Component text, long time, boolean important) {
     }
+
+    /** A citizen as listed in the People tab. */
+    public record PersonInfo(UUID id, String name, boolean female, int job, String work, String spouse, int children,
+                             long mourning, String mourningFor, long trapped) {
+    }
+
+    public static List<PersonInfo> people = new ArrayList<>();
+    public static int peopleVersion;
 
     private ClientState() {}
 
@@ -66,6 +76,7 @@ public final class ClientState {
         data = new GameData();
         hasData = false;
         units = List.of();
+        people = new ArrayList<>();
         NOTES.clear();
         stateVersion++;
         territoryVersion++;

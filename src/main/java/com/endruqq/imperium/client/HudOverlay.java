@@ -87,7 +87,8 @@ public final class HudOverlay {
                 g.drawString(font, v, ix + 9, y + 23, t == ResourceType.FOOD && n.famine ? 0xFFFF4040 : 0xFFEEEEEE);
                 ix += 16 + font.width(v);
             }
-            if (n.famine) g.drawString(font, Component.translatable("imperium.hud.famine").withStyle(ChatFormatting.RED), x, y + 33, 0xFFFFFF);
+            if (n.trappedCount > 0) g.drawString(font, Component.translatable("imperium.hud.trapped", n.trappedCount).withStyle(ChatFormatting.RED), x, y + 33, 0xFFFFFF);
+            else if (n.famine) g.drawString(font, Component.translatable("imperium.hud.famine").withStyle(ChatFormatting.RED), x, y + 33, 0xFFFFFF);
             else if (d.inGracePeriod()) g.drawString(font, Component.translatable("imperium.hud.grace", UiUtil.time(ClientState.graceSeconds())), x, y + 33, 0xFF9AD0FF);
             else if (d.atWarWithAnyone(n.id)) g.drawString(font, Component.translatable("imperium.hud.at_war").withStyle(ChatFormatting.RED), x, y + 33, 0xFFFFFF);
         }
@@ -100,10 +101,14 @@ public final class HudOverlay {
         } else {
             Nation owner = d.nation(p.owner);
             where = Component.translatable("imperium.hud.province", p.name, owner == null ? "-" : owner.name);
-            if (n != null && owner != null && owner.id != n.id) {
-                RelationType rt = d.relationType(n.id, owner.id);
+            if (owner != null && (n == null || owner.id != n.id)) {
+                RelationType rt = n == null ? RelationType.PEACE : d.relationType(n.id, owner.id);
                 color = rt == RelationType.WAR ? 0xFFFF4040 : rt == RelationType.ALLIANCE ? 0xFF60FF60 : 0xFFFFD060;
                 where = where.copy().append(" [").append(Component.translatable(rt.key())).append("]");
+                if (owner.bordersClosed && rt != RelationType.ALLIANCE && rt != RelationType.WAR) {
+                    where = where.copy().append(" ").append(Component.translatable("imperium.hud.closed_border").withStyle(ChatFormatting.RED));
+                    color = 0xFFFF6040;
+                }
             } else if (owner != null) {
                 color = 0xFF000000 | owner.rgb();
             }

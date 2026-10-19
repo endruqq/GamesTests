@@ -23,7 +23,7 @@ public class SoldierOrderGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (soldier.isRetreating()) return false;
+        if (soldier.isRetreating() || soldier.isSurrendered()) return false;
         OrderType o = soldier.getOrder();
         if (o == OrderType.ATTACK_CORE) return false;
         if (o != OrderType.MOVE && o != OrderType.RETURN && soldier.getTarget() != null) return false;
@@ -60,6 +60,15 @@ public class SoldierOrderGoal extends Goal {
                 if (soldier.position().distanceToSqr(anchor) > 2.5 * 2.5) moveTo(anchor, 1.0D, false);
             }
             case FOLLOW -> follow();
+            case PATROL -> {
+                Vec3 p = soldier.patrolPoint();
+                if (p == null) {
+                    soldier.hold(soldier.position());
+                } else if (moveTo(p, 0.95D, false)) {
+                    soldier.advancePatrol();
+                    repath = 0;
+                }
+            }
             case ATTACK_TARGET -> {
                 Entity e = findEntity();
                 if (e instanceof LivingEntity le && le.isAlive()) {
@@ -78,18 +87,23 @@ public class SoldierOrderGoal extends Goal {
         return sl.getEntity(soldier.getOrderEntity());
     }
 
-    private void moveTo(Vec3 dest, double speed, boolean finishToHold) {
+    /** @return true when the destination is reached */
+    private boolean moveTo(Vec3 dest, double speed, boolean finishToHold) {
         double distSq = soldier.position().distanceToSqr(dest.x, soldier.getY(), dest.z);
         if (distSq < 1.6 * 1.6 && Math.abs(soldier.getY() - dest.y) < 3) {
             soldier.getNavigation().stop();
             if (finishToHold) soldier.hold(dest);
-            return;
+            return true;
         }
         if (--repath <= 0 || soldier.getNavigation().isDone()) {
             boolean ok = soldier.getNavigation().moveTo(dest.x, dest.y, dest.z, speed);
             repath = ok ? 30 : 15;
-            if (!ok && distSq < 4 * 4 && finishToHold) soldier.hold(soldier.position());
+            if (!ok && distSq < 4 * 4) {
+                if (finishToHold) soldier.hold(soldier.position());
+                return true;
+            }
         }
+        return false;
     }
 
     private void follow() {

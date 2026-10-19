@@ -37,6 +37,10 @@ public class Nation {
     public int citizenCount;
     public int hardshipCycles;
     public long lastProvinceLostTick = -100000;
+    /** closed borders: foreign soldiers and strangers on our land are attacked */
+    public boolean bordersClosed;
+    /** players get jobs assigned automatically when true (bots always do) */
+    public boolean autoJobs;
 
     // ---- values computed every economy cycle (synced for UI) ----
     public Resources lastDelta = new Resources();
@@ -45,9 +49,21 @@ public class Nation {
     public boolean famine;
     public boolean unpaid;
     public double happinessTarget = 60;
+    public int citizenCap;
+    public int employed;
+    public int unemployed;
+    public int marriedCount;
+    public int mourningCount;
+    public int trappedCount;
+    /** enough goods for everybody this cycle */
+    public boolean prosperity;
+    /** provinces that used to be ours and are now held by others */
+    public int lostLands;
 
     /** recent events, newest last */
     public final List<Component> log = new ArrayList<>();
+    /** what people talk about, newest last */
+    public final List<Gossip> gossip = new ArrayList<>();
 
     public NationColor color() {
         return NationColor.byIndex(colorIndex);
@@ -82,6 +98,11 @@ public class Nation {
         while (log.size() > 30) log.remove(0);
     }
 
+    public void addGossip(Gossip g) {
+        gossip.add(g);
+        while (gossip.size() > 12) gossip.remove(0);
+    }
+
     public CompoundTag save() {
         CompoundTag t = new CompoundTag();
         t.putInt("id", id);
@@ -114,6 +135,19 @@ public class Nation {
         t.putInt("citizens", citizenCount);
         t.putInt("hardship", hardshipCycles);
         t.putLong("lastLost", lastProvinceLostTick);
+        t.putBoolean("closed", bordersClosed);
+        t.putBoolean("autoJobs", autoJobs);
+        t.putInt("ccap", citizenCap);
+        t.putInt("employed", employed);
+        t.putInt("unemployed", unemployed);
+        t.putInt("married", marriedCount);
+        t.putInt("mourning", mourningCount);
+        t.putInt("trapped", trappedCount);
+        t.putBoolean("prosperity", prosperity);
+        t.putInt("lostLands", lostLands);
+        ListTag gl = new ListTag();
+        for (Gossip g : gossip) gl.add(g.save());
+        t.put("gossip", gl);
         t.put("delta", lastDelta.save());
         t.putDouble("rdelta", researchDelta);
         t.putInt("housing", housing);
@@ -156,6 +190,18 @@ public class Nation {
         n.citizenCount = t.getInt("citizens");
         n.hardshipCycles = t.getInt("hardship");
         n.lastProvinceLostTick = t.getLong("lastLost");
+        n.bordersClosed = t.getBoolean("closed");
+        n.autoJobs = t.getBoolean("autoJobs");
+        n.citizenCap = t.getInt("ccap");
+        n.employed = t.getInt("employed");
+        n.unemployed = t.getInt("unemployed");
+        n.marriedCount = t.getInt("married");
+        n.mourningCount = t.getInt("mourning");
+        n.trappedCount = t.getInt("trapped");
+        n.prosperity = t.getBoolean("prosperity");
+        n.lostLands = t.getInt("lostLands");
+        ListTag gl = t.getList("gossip", Tag.TAG_COMPOUND);
+        for (int i = 0; i < gl.size(); i++) n.gossip.add(Gossip.load(gl.getCompound(i)));
         n.lastDelta = Resources.load(t.getCompound("delta"));
         n.researchDelta = t.getDouble("rdelta");
         n.housing = t.getInt("housing");

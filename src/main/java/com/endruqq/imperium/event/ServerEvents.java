@@ -65,6 +65,10 @@ public final class ServerEvents {
                 if (d.gameTick % 20 == 0) {
                     WarManager.regenerate(d);
                     DiplomacyManager.tick(server, d);
+                    com.endruqq.imperium.game.WarReasons.tick(server, d);
+                    com.endruqq.imperium.game.BorderManager.tick(server, d);
+                    com.endruqq.imperium.game.PeopleManager.tick(level, d);
+                    com.endruqq.imperium.game.PrisonerManager.tick(level, d);
                     d.stateDirty = true;
                 }
                 if (d.gameTick % 40 == 0) TerritoryEffects.tick(server, d);
@@ -112,6 +116,7 @@ public final class ServerEvents {
         Sync.clear();
         WarManager.clear();
         BuildingManager.clearCaches();
+        com.endruqq.imperium.game.BorderManager.clear();
         com.endruqq.imperium.game.ChunkLoading.clear();
     }
 
@@ -131,6 +136,8 @@ public final class ServerEvents {
         GameData d = Game.data(victim.level());
         if (d == null) return;
         int a = Allegiance.nationOf(src, d), v = Allegiance.nationOf(victim, d);
+        // intruders on closed land and the owners may fight without a war
+        if (d.phase == GamePhase.RUNNING && com.endruqq.imperium.game.BorderManager.borderConflict(d, src, victim)) return;
         if (a < 0 || v < 0) return;
         if (d.phase != GamePhase.RUNNING || a == v || d.allied(a, v) || !d.atWar(a, v)) {
             event.setCanceled(true);

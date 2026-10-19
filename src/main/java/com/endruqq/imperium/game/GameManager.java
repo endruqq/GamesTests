@@ -78,6 +78,8 @@ public final class GameManager {
         d.buildings.values().removeIf(b -> b.nation == id);
         d.relations.values().removeIf(r -> r.a == id || r.b == id);
         d.proposals.removeIf(p -> p.from == id || p.to == id);
+        d.people.values().removeIf(p -> p.nation == id);
+        d.casusBelli.removeIf(c -> c.holder == id || c.target == id);
         d.markTerritoryChanged();
         d.markChanged();
     }
@@ -200,7 +202,19 @@ public final class GameManager {
         d.relations.clear();
         d.proposals.clear();
         d.buildings.clear();
+        d.people.clear();
+        d.deceased.clear();
+        d.casusBelli.clear();
+        d.claimsInProgress.clear();
+        d.session++;
         BuildingManager.clearCaches();
+        BorderManager.clear();
+        net.minecraft.util.RandomSource rnd = level.random;
+        for (Province p : d.provinces.values()) {
+            // about two thirds of the provinces have some natural wealth worth fighting for
+            ProvinceResource[] res = ProvinceResource.values();
+            p.resource = rnd.nextInt(3) == 0 ? ProvinceResource.NONE : res[1 + rnd.nextInt(res.length - 1)];
+        }
         for (Nation n : d.nations.values()) {
             if (n.members.isEmpty() && ImperiumConfig.AUTO_BOTS.get()) n.bot = true;
             if (!n.members.isEmpty()) n.bot = false;
@@ -218,6 +232,10 @@ public final class GameManager {
             n.hardshipCycles = 0;
             n.famine = false;
             n.unpaid = false;
+            n.bordersClosed = false;
+            n.prosperity = false;
+            n.lostLands = 0;
+            n.gossip.clear();
             n.log.clear();
             n.lastProvinceLostTick = -100000;
             Province cap = d.provinces.get(n.capitalProvince);
@@ -338,9 +356,14 @@ public final class GameManager {
         for (SoldierEntity s : UnitRegistry.soldiers()) s.discard();
         for (CitizenEntity c : UnitRegistry.citizens()) c.discard();
         d.phase = GamePhase.SETUP;
+        d.session++;
         d.buildings.clear();
         d.relations.clear();
         d.proposals.clear();
+        d.people.clear();
+        d.casusBelli.clear();
+        d.claimsInProgress.clear();
+        BorderManager.clear();
         d.winner = "";
         for (Nation n : d.nations.values()) {
             n.eliminated = false;

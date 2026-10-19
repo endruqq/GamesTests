@@ -14,7 +14,9 @@ public enum OrderType {
     /** follow a player */
     FOLLOW,
     /** go back to the barracks */
-    RETURN;
+    RETURN,
+    /** walk a route back and forth, fighting intruders on the way */
+    PATROL;
 
     public String key() {
         return "imperium.order." + name().toLowerCase();

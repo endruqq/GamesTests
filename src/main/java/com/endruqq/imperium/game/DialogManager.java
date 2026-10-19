@@ -5,6 +5,7 @@ import com.endruqq.imperium.entity.OrderType;
 import com.endruqq.imperium.entity.SoldierEntity;
 import com.endruqq.imperium.entity.Stance;
 import com.endruqq.imperium.game.building.Building;
+import com.endruqq.imperium.game.building.BuildingType;
 import com.endruqq.imperium.game.building.Buildings;
 import com.endruqq.imperium.network.ClientActionPacket;
 import com.endruqq.imperium.network.ImperiumNet;
@@ -98,15 +99,18 @@ public final class DialogManager {
 
     // ------------------------------------------------------------------ citizens
 
-    private record Ctx(GameData d, Nation own, Nation playerNation, String mood, Object[] args) {
+    private record Ctx(GameData d, Nation own, Nation playerNation, Person person, String mood, Object[] args) {
     }
 
     private static Ctx citizenCtx(ServerPlayer p, CitizenEntity c, RandomSource r, String topic) {
         GameData d = GameData.get(p.getServer());
         Nation own = d.nation(c.getNationId());
         Nation pn = d.nationOf(p.getUUID());
+        Person person = PeopleManager.get(d, c.getUUID());
         String mood;
         if (own != null && pn != null && own.id != pn.id) mood = d.atWar(own.id, pn.id) ? "enemy" : "foreign";
+        else if (person != null && person.trapped) mood = "trapped";
+        else if (person != null && person.mourning(d.gameTick)) mood = "mourning";
         else mood = pickMood(moods(d, own), r, topic);
         String other = "-";
         List<Nation> enemies = own == null ? List.of() : d.enemiesOf(own.id);
@@ -116,27 +120,54 @@ public final class DialogManager {
             for (Nation n : d.activeNations()) if (own == null || n.id != own.id) all.add(n);
             if (!all.isEmpty()) other = all.get(r.nextInt(all.size())).name;
         }
+        if (person != null && (mood.equals("mourning") || mood.equals("trapped"))) other = mood.equals("mourning") ? person.mourningFor : person.spouseName;
         Province prov = d.provinceAt(c.blockPosition());
         Object[] args = {p.getGameProfile().getName(), own == null ? "-" : own.name, other, c.getCitizenName(),
-                prov == null ? "-" : prov.name};
-        return new Ctx(d, own, pn, mood, args);
+                prov == null ? "-" : prov.name, ""};
+        return new Ctx(d, own, pn, person, mood, args);
     }
 
     private static Map<String, Component> citizenOptions(ServerPlayer p, Ctx ctx) {
         Map<String, Component> o = new LinkedHashMap<>();
         boolean same = ctx.own != null && ctx.playerNation != null && ctx.own.id == ctx.playerNation.id;
         boolean enemy = "enemy".equals(ctx.mood);
+        boolean sad = "mourning".equals(ctx.mood) || "trapped".equals(ctx.mood);
         o.put("how", opt("how"));
         o.put("news", opt("news"));
-        if (!enemy) o.put("joke", opt("joke"));
+        if (!enemy && !sad) o.put("joke", opt("joke"));
         o.put("work", opt("work"));
+        if (!enemy) o.put("family", opt("family"));
         if (same) {
+            if (!"trapped".equals(ctx.mood)) o.put("jobs", opt("jobs"));
             o.put("ruler", opt("ruler"));
-            o.put("recruit", opt("recruit"));
+            if (!sad) o.put("recruit", opt("recruit"));
         }
         if (p.getMainHandItem().isEdible()) o.put("gift", opt("gift"));
         if (enemy) o.put("threaten", opt("threaten"));
         o.put("bye", opt("bye"));
+        return o;
+    }
+
+    /** The job menu: free workplaces of the nation. */
+    private static Map<String, Component> jobOptions(Ctx ctx) {
+        Map<String, Component> o = new LinkedHashMap<>();
+        if (ctx.own != null) {
+            Map<String, int[]> free = new LinkedHashMap<>();
+            for (Building b : ctx.d.buildings.values()) {
+                BuildingType t = b.type();
+                if (b.nation != ctx.own.id || !b.isActive() || t == null || !t.isWorkplace()) continue;
+                int f = PeopleManager.freeSlots(ctx.d, b);
+                if (ctx.person != null && ctx.person.workplace == b.id) continue;
+                free.computeIfAbsent(t.id, k -> new int[1])[0] += f;
+            }
+            for (Map.Entry<String, int[]> e : free.entrySet()) {
+                if (e.getValue()[0] <= 0 || o.size() >= 7) continue;
+                BuildingType t = Buildings.get(e.getKey());
+                o.put("job:" + e.getKey(), Component.translatable("imperium.dlgopt.job_at", t.profession.title(), t.name(), e.getValue()[0]));
+            }
+        }
+        if (ctx.person != null && ctx.person.workplace >= 0) o.put("job:quit", opt("job_quit"));
+        o.put("back", opt("back"));
         return o;
     }
 
@@ -157,22 +188,33 @@ public final class DialogManager {
         Ctx ctx = citizenCtx(p, c, r, option);
         GameData d = ctx.d;
         Component text;
-        switch (option) {
-            case "how" -> text = line(r, "imperium.dlg.how." + ctx.mood, ctx.args);
-            case "joke" -> text = line(r, "imperium.dlg.joke." + pickMood(moods(d, ctx.own), r, "joke"), ctx.args);
-            case "work" -> text = line(r, "imperium.dlg.work." + c.getProfession().id(), ctx.args);
-            case "news" -> text = news(r, d, ctx);
-            case "ruler" -> {
-                double h = ctx.own == null ? 50 : ctx.own.happiness;
-                text = line(r, "imperium.dlg.ruler." + (h > 65 ? "love" : h > 35 ? "ok" : "hate"), ctx.args);
-            }
-            case "recruit" -> text = recruit(p, c, ctx, r);
-            case "gift" -> text = gift(p, c, ctx, r);
-            case "threaten" -> text = threaten(p, c, ctx, r);
-            default -> {
-                close(p);
-                p.displayClientMessage(Component.literal(c.getCitizenName() + ": ").append(line(r, "imperium.dlg.bye", ctx.args)), true);
-                return;
+        Map<String, Component> next = null;
+        if (option.startsWith("job:")) {
+            text = job(c, ctx, r, option.substring(4));
+        } else {
+            switch (option) {
+                case "how" -> text = how(r, ctx);
+                case "joke" -> text = line(r, "imperium.dlg.joke." + pickMood(moods(d, ctx.own), r, "joke"), ctx.args);
+                case "work" -> text = line(r, "imperium.dlg.work." + c.getProfession().id(), ctx.args);
+                case "news" -> text = news(r, d, ctx);
+                case "family" -> text = family(r, d, ctx);
+                case "jobs" -> {
+                    text = line(r, "imperium.dlg.jobs.ask", ctx.args);
+                    next = jobOptions(ctx);
+                }
+                case "back" -> text = line(r, "imperium.dlg.greet." + ("enemy".equals(ctx.mood) || "foreign".equals(ctx.mood) ? ctx.mood : "normal"), ctx.args);
+                case "ruler" -> {
+                    double h = ctx.own == null ? 50 : ctx.own.happiness;
+                    text = line(r, "imperium.dlg.ruler." + (h > 65 ? "love" : h > 35 ? "ok" : "hate"), ctx.args);
+                }
+                case "recruit" -> text = recruit(p, c, ctx, r);
+                case "gift" -> text = gift(p, c, ctx, r);
+                case "threaten" -> text = threaten(p, c, ctx, r);
+                default -> {
+                    close(p);
+                    p.displayClientMessage(Component.literal(c.getCitizenName() + ": ").append(line(r, "imperium.dlg.bye", ctx.args)), true);
+                    return;
+                }
             }
         }
         if (!c.isAlive() || c.isRemoved()) {
@@ -180,12 +222,97 @@ public final class DialogManager {
             p.sendSystemMessage(Component.literal("<" + c.getCitizenName() + "> ").append(text));
             return;
         }
-        send(p, c, c.getCitizenName(), subtitle(d, c), c.getNationId(), ctx.mood, text, citizenOptions(p, ctx));
+        Ctx after = citizenCtx(p, c, r, "greet");
+        send(p, c, c.getCitizenName(), subtitle(d, c), c.getNationId(), after.mood, text, next != null ? next : citizenOptions(p, after));
+    }
+
+    private static Component how(RandomSource r, Ctx ctx) {
+        if ("mourning".equals(ctx.mood) && ctx.person != null) {
+            String cause = ctx.person.mourningCause.isEmpty() ? "other" : ctx.person.mourningCause;
+            String key = "imperium.dlg.how.mourning." + cause;
+            return line(r, DialogLines.count(key) > 0 ? key : "imperium.dlg.how.mourning.other", ctx.args);
+        }
+        return line(r, "imperium.dlg.how." + ctx.mood, ctx.args);
+    }
+
+    private static Component family(RandomSource r, GameData d, Ctx ctx) {
+        Person p = ctx.person;
+        Object[] args = ctx.args.clone();
+        if (p == null) return line(r, "imperium.dlg.family.single", args);
+        if ("trapped".equals(ctx.mood)) return line(r, "imperium.dlg.family.trapped", args);
+        if (p.mourning(d.gameTick)) {
+            args[2] = p.mourningFor;
+            return line(r, "imperium.dlg.family.mourning", args);
+        }
+        if (p.married()) {
+            args[2] = p.spouseName;
+            Person s = d.people.get(p.spouse);
+            if (s != null && s.trapped) return line(r, "imperium.dlg.family.spouse_trapped", args);
+            if (p.children > 0 && r.nextInt(3) == 0) {
+                args[5] = String.valueOf(p.children);
+                return line(r, "imperium.dlg.family.children", args);
+            }
+            if (s != null && s.job == com.endruqq.imperium.entity.Profession.MINER) {
+                return line(r, p.female ? "imperium.dlg.family.miner_wife" : "imperium.dlg.family.miner_husband", args);
+            }
+            return line(r, p.female ? "imperium.dlg.family.married_f" : "imperium.dlg.family.married_m", args);
+        }
+        if (!p.spouseName.isEmpty()) {
+            args[2] = p.spouseName;
+            return line(r, "imperium.dlg.family.widowed", args);
+        }
+        return line(r, p.female ? "imperium.dlg.family.single_f" : "imperium.dlg.family.single", args);
+    }
+
+    private static Component job(CitizenEntity c, Ctx ctx, RandomSource r, String what) {
+        Person p = ctx.person;
+        GameData d = ctx.d;
+        if (p == null || ctx.own == null || ctx.playerNation == null || ctx.own.id != ctx.playerNation.id) {
+            return line(r, "imperium.dlg.recruit.foreign", ctx.args);
+        }
+        if (what.equals("quit")) {
+            PeopleManager.unassign(d, p);
+            PeopleManager.recountWorkers(d);
+            d.markChanged();
+            return line(r, "imperium.dlg.jobs.quit", ctx.args);
+        }
+        if (p.mourning(d.gameTick)) {
+            Object[] args = ctx.args.clone();
+            args[2] = p.mourningFor;
+            return line(r, "imperium.dlg.jobs.refuse_mourning", args);
+        }
+        BuildingType t = Buildings.get(what);
+        if (t == null) return line(r, "imperium.dlg.jobs.none", ctx.args);
+        if (c.getPersonality() == 1 && r.nextInt(4) == 0) return line(r, "imperium.dlg.jobs.refuse_grumpy", ctx.args);
+        Building b = PeopleManager.findWorkplace(d, p, t);
+        if (b == null) return line(r, "imperium.dlg.jobs.none", ctx.args);
+        Component err = PeopleManager.assign(d, p, b);
+        if (err != null) return err;
+        Object[] args = ctx.args.clone();
+        args[4] = t.name();
+        String key = "imperium.dlg.jobs.accept." + t.profession.id();
+        return line(r, DialogLines.count(key) > 0 ? key : "imperium.dlg.jobs.accept.any", args);
     }
 
     private static Component news(RandomSource r, GameData d, Ctx ctx) {
-        List<String> kinds = new ArrayList<>();
         Nation own = ctx.own;
+        // what everybody talks about: accidents, weddings, rescues
+        if (own != null && !own.gossip.isEmpty() && r.nextInt(10) < 6) {
+            List<Gossip> fresh = new ArrayList<>();
+            String me = ctx.person == null ? "" : ctx.person.name;
+            for (Gossip g : own.gossip) {
+                if (d.gameTick - g.tick < 20 * 60 * 30 && !g.who.equals(me) && !g.other.equals(me)) fresh.add(g);
+            }
+            if (!fresh.isEmpty()) {
+                Gossip g = fresh.get(Math.max(0, fresh.size() - 1 - r.nextInt(Math.min(3, fresh.size()))));
+                String key = "imperium.dlg.news.gossip." + g.type;
+                if (DialogLines.count(key) > 0) {
+                    Object[] args = {ctx.args[0], ctx.args[1], g.who, ctx.args[3], g.place.isEmpty() ? ctx.args[4] : g.place, g.other};
+                    return line(r, key, args);
+                }
+            }
+        }
+        List<String> kinds = new ArrayList<>();
         if (own != null) {
             if (d.atWarWithAnyone(own.id)) kinds.add("war");
             if (own.famine) kinds.add("famine");
@@ -196,6 +323,8 @@ public final class DialogManager {
                 break;
             }
             if (!d.buildingsOf(own.id).isEmpty()) kinds.add("building");
+            if (own.bordersClosed) kinds.add("borders");
+            if (own.prosperity) kinds.add("prosperity");
         }
         kinds.add("strongest");
         if (kinds.size() == 1 || (own != null && !d.atWarWithAnyone(own.id))) kinds.add("peace");
@@ -226,7 +355,14 @@ public final class DialogManager {
         else if (n.happiness > 70) chance = 0.3;
         if (c.getPersonality() == 2) chance += 0.15;
         if (c.getPersonality() == 1) chance -= 0.15;
+        // family people would rather stay home
+        if (ctx.person != null && ctx.person.married()) chance -= 0.2;
         String moodKey = n.famine ? "famine" : ctx.d.atWarWithAnyone(n.id) ? "war" : n.happiness > 70 ? "happy" : "normal";
+        if (ctx.person != null && ctx.person.married() && r.nextDouble() >= chance) {
+            Object[] args = ctx.args.clone();
+            args[2] = ctx.person.spouseName;
+            return line(r, "imperium.dlg.recruit.no.married", args);
+        }
         if (r.nextDouble() < chance) {
             Component text = line(r, "imperium.dlg.recruit.yes." + (DialogLines.count("imperium.dlg.recruit.yes." + moodKey) > 0 ? moodKey : "normal"), ctx.args);
             MilitaryManager.conscriptCitizen((ServerLevel) c.level(), ctx.d, n, c);
@@ -244,6 +380,8 @@ public final class DialogManager {
         if (n != null && ctx.playerNation != null && n.id != ctx.playerNation.id) {
             ctx.d.relation(n.id, ctx.playerNation.id).addOpinion(n.id, ctx.playerNation.id, 2);
             key = "foreign";
+        } else if ("mourning".equals(ctx.mood)) {
+            key = "mourning";
         } else if (n != null && n.famine) {
             n.happiness = Math.min(100, n.happiness + 3);
             key = "famine";
@@ -255,7 +393,7 @@ public final class DialogManager {
         }
         c.heal(4);
         ctx.d.markChanged();
-        return line(r, "imperium.dlg.gift." + key, ctx.args);
+        return line(r, "imperium.dlg.gift." + (DialogLines.count("imperium.dlg.gift." + key) > 0 ? key : "normal"), ctx.args);
     }
 
     private static Component threaten(ServerPlayer p, CitizenEntity c, Ctx ctx, RandomSource r) {
@@ -388,6 +526,74 @@ public final class DialogManager {
         send(p, s, s.getSoldierName(), soldierSubtitle(d, s), s.getNationId(), mood, text, soldierOptions(true, s));
     }
 
+    // ------------------------------------------------------------------ prisoners of war
+
+    private static Map<String, Component> prisonerOptions(GameData d, SoldierEntity s, boolean captor) {
+        Map<String, Component> o = new LinkedHashMap<>();
+        if (captor) {
+            o.put("p_army", Component.translatable("imperium.dlgopt.prisoner_army", pct(PrisonerManager.chance(d, s, PrisonerManager.Offer.ARMY))));
+            o.put("p_work", Component.translatable("imperium.dlgopt.prisoner_work", pct(PrisonerManager.chance(d, s, PrisonerManager.Offer.WORK))));
+            o.put("p_bribe", Component.translatable("imperium.dlgopt.prisoner_bribe", PrisonerManager.BRIBE_GOLD,
+                    pct(PrisonerManager.chance(d, s, PrisonerManager.Offer.BRIBE))));
+            o.put("p_release", opt("prisoner_release"));
+        } else {
+            o.put("how", opt("how"));
+        }
+        o.put("bye", opt("bye"));
+        return o;
+    }
+
+    private static String pct(double c) {
+        return (int) Math.round(c * 100) + "%";
+    }
+
+    public static void openPrisonerDialog(ServerPlayer p, SoldierEntity s) {
+        GameData d = GameData.get(p.getServer());
+        RandomSource r = p.getRandom();
+        Nation n = d.nation(s.getNationId());
+        Nation pn = d.nationOf(p.getUUID());
+        boolean captor = pn != null && pn.id == s.getCaptor();
+        Object[] args = {p.getGameProfile().getName(), n == null ? "-" : n.name, pn == null ? "-" : pn.name, s.getSoldierName(), ""};
+        Component text = line(r, captor ? "imperium.dlg.prisoner.greet" : "imperium.dlg.prisoner.other", args);
+        send(p, s, s.getSoldierName(), Component.translatable("imperium.dlg.subtitle_prisoner", s.getUnitType().title(), n == null ? "-" : n.name),
+                s.getNationId(), "prisoner", text, prisonerOptions(d, s, captor));
+    }
+
+    private static void prisonerChoice(ServerPlayer p, SoldierEntity s, String option) {
+        GameData d = GameData.get(p.getServer());
+        RandomSource r = p.getRandom();
+        Nation n = d.nation(s.getNationId());
+        Nation pn = d.nationOf(p.getUUID());
+        boolean captor = pn != null && pn.id == s.getCaptor();
+        Object[] args = {p.getGameProfile().getName(), n == null ? "-" : n.name, pn == null ? "-" : pn.name, s.getSoldierName(), ""};
+        PrisonerManager.Offer offer = switch (option) {
+            case "p_army" -> PrisonerManager.Offer.ARMY;
+            case "p_work" -> PrisonerManager.Offer.WORK;
+            case "p_bribe" -> PrisonerManager.Offer.BRIBE;
+            case "p_release" -> PrisonerManager.Offer.RELEASE;
+            default -> null;
+        };
+        if (offer == null || !captor) {
+            if (option.equals("how")) {
+                send(p, s, s.getSoldierName(), Component.empty(), s.getNationId(), "prisoner",
+                        line(r, "imperium.dlg.prisoner.other", args), prisonerOptions(d, s, captor));
+            } else {
+                close(p);
+            }
+            return;
+        }
+        String result = PrisonerManager.offer(p.serverLevel(), d, s, pn, offer, r);
+        String key = "imperium.dlg.prisoner." + (result.equals("yes") ? "yes." + (offer == PrisonerManager.Offer.WORK ? "work" : "army") : result);
+        Component text = line(r, key, args);
+        if (!s.isAlive() || s.isRemoved() || !s.isSurrendered()) {
+            close(p);
+            p.sendSystemMessage(Component.literal("<" + s.getSoldierName() + "> ").append(text));
+            return;
+        }
+        send(p, s, s.getSoldierName(), Component.translatable("imperium.dlg.subtitle_prisoner", s.getUnitType().title(), n == null ? "-" : n.name),
+                s.getNationId(), "prisoner", text, prisonerOptions(d, s, true));
+    }
+
     /** Handles a dialog option picked by the player. */
     public static void choice(ServerPlayer p, int entityId, String option) {
         Entity e = p.serverLevel().getEntity(entityId);
@@ -396,6 +602,7 @@ public final class DialogManager {
             return;
         }
         if (e instanceof CitizenEntity c) citizenChoice(p, c, option);
+        else if (e instanceof SoldierEntity s && s.isSurrendered()) prisonerChoice(p, s, option);
         else if (e instanceof SoldierEntity s) soldierChoice(p, s, option);
         else close(p);
     }

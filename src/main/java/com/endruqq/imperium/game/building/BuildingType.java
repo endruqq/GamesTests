@@ -1,5 +1,6 @@
 package com.endruqq.imperium.game.building;
 
+import com.endruqq.imperium.entity.Profession;
 import com.endruqq.imperium.game.Nation;
 import com.endruqq.imperium.game.Resources;
 import com.endruqq.imperium.game.tech.Tech;
@@ -24,6 +25,11 @@ public class BuildingType {
     public final int maxHousing;
     public final int maxPerNation;
     public final Style style;
+    /** how many citizens can work here (0 = not a workplace) */
+    public final int workerSlots;
+    public final Profession profession;
+    /** share of the output an unstaffed building still produces */
+    public final double unstaffedOutput;
     private final Item icon;
 
     private BuildingType(Builder b) {
@@ -37,6 +43,9 @@ public class BuildingType {
         this.maxHousing = b.maxHousing;
         this.maxPerNation = b.maxPerNation;
         this.style = b.style;
+        this.workerSlots = b.workerSlots;
+        this.profession = b.profession;
+        this.unstaffedOutput = b.unstaffedOutput;
         this.icon = b.icon;
     }
 
@@ -64,6 +73,10 @@ public class BuildingType {
         return radius * 2 + 1;
     }
 
+    public boolean isWorkplace() {
+        return workerSlots > 0 && profession != null;
+    }
+
     public static class Builder {
         private final String id;
         private final BuildingCategory category;
@@ -75,6 +88,9 @@ public class BuildingType {
         private int maxHousing;
         private int maxPerNation;
         private Style style = Style.SHELL;
+        private int workerSlots;
+        private Profession profession;
+        private double unstaffedOutput = 0.35;
         private Item icon;
 
         public Builder(String id, BuildingCategory category, int radius, int height, Item icon) {
@@ -112,6 +128,17 @@ public class BuildingType {
 
         public Builder style(Style s) {
             this.style = s;
+            return this;
+        }
+
+        public Builder workers(int slots, Profession p) {
+            this.workerSlots = slots;
+            this.profession = p;
+            return this;
+        }
+
+        public Builder unstaffed(double share) {
+            this.unstaffedOutput = share;
             return this;
         }
 

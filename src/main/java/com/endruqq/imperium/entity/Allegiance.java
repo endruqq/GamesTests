@@ -37,8 +37,20 @@ public final class Allegiance {
             return allowCreepers || !(e instanceof Creeper);
         }
         if (!(e instanceof SoldierEntity) && !(e instanceof Player)) return false;
+        if (e instanceof SoldierEntity s && s.isSurrendered()) return false;
+        // strangers on our land while the borders are closed
+        if (myNation >= 0 && com.endruqq.imperium.game.BorderManager.isTrespasser(data, e, myNation)) return true;
         int other = nationOf(e, data);
         return other >= 0 && myNation >= 0 && data.atWar(myNation, other);
+    }
+
+    /** Like {@link #isHostile}, plus self-defence of a soldier that is itself trespassing. */
+    public static boolean isHostileTo(GameData data, SoldierEntity me, LivingEntity e, boolean allowCreepers) {
+        if (isHostile(data, me.getNationId(), e, allowCreepers)) return true;
+        if (e == null || !e.isAlive() || !(e instanceof SoldierEntity || e instanceof Player)) return false;
+        if (e instanceof SoldierEntity s && s.isSurrendered()) return false;
+        int other = nationOf(e, data);
+        return other >= 0 && com.endruqq.imperium.game.BorderManager.isTrespasser(data, me, other);
     }
 
     /** May {@code attacker} damage {@code victim} at all? */

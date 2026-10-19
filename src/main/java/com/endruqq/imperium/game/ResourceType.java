@@ -11,7 +11,8 @@ public enum ResourceType {
     IRON(0xD8D8D8),
     GOLD(0xF5D442),
     STEEL(0x7E8FA3),
-    FOOD(0xE08A3C);
+    FOOD(0xE08A3C),
+    GOODS(0x6FA8DC);
 
     public final int color;
 
@@ -35,6 +36,7 @@ public enum ResourceType {
             case GOLD -> new ItemStack(Items.GOLD_INGOT);
             case STEEL -> new ItemStack(ModItems.STEEL_INGOT.get());
             case FOOD -> new ItemStack(Items.BREAD);
+            case GOODS -> new ItemStack(Items.BARREL);
         };
     }
 

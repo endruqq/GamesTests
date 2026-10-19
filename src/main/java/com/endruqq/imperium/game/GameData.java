@@ -14,8 +14,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,6 +31,8 @@ public class GameData extends SavedData {
     public long gameTick;
     public long startTick;
     public long graceTicks;
+    /** bumped at every start/reset: citizens from an older game are removed when their chunk loads */
+    public int session;
 
     // ---- arena ----
     public boolean arenaSet;
@@ -45,6 +49,13 @@ public class GameData extends SavedData {
     public final Map<Integer, Building> buildings = new LinkedHashMap<>();
     public final Map<Long, Relation> relations = new HashMap<>();
     public final List<Proposal> proposals = new ArrayList<>();
+    /** citizens' lives, by entity UUID (server only, not sent to clients) */
+    public final Map<UUID, Person> people = new LinkedHashMap<>();
+    /** citizens that died while their chunk was unloaded; their entities are removed when loaded */
+    public final Set<UUID> deceased = new LinkedHashSet<>();
+    public final List<CasusBelli> casusBelli = new ArrayList<>();
+    /** claims being fabricated by spies; {@link CasusBelli#expires} is the tick they are ready */
+    public final List<CasusBelli> claimsInProgress = new ArrayList<>();
     public int nextNationId = 1;
     public int nextProvinceId = 1;
     public int nextBuildingId = 1;
@@ -297,6 +308,18 @@ public class GameData extends SavedData {
         return null;
     }
 
+    public List<Person> peopleOf(int nationId) {
+        List<Person> l = new ArrayList<>();
+        for (Person p : people.values()) if (p.nation == nationId) l.add(p);
+        return l;
+    }
+
+    public List<Person> workersAt(int buildingId) {
+        List<Person> l = new ArrayList<>();
+        for (Person p : people.values()) if (p.workplace == buildingId) l.add(p);
+        return l;
+    }
+
     // ------------------------------------------------------------------ proposals
 
     public Proposal proposal(int id) {
@@ -327,6 +350,7 @@ public class GameData extends SavedData {
         gameTick = tag.getLong("tick");
         startTick = tag.getLong("start");
         graceTicks = tag.getLong("grace");
+        session = tag.getInt("session");
         arenaSet = tag.getBoolean("arena");
         centerX = tag.getInt("cx");
         centerZ = tag.getInt("cz");
@@ -367,6 +391,23 @@ public class GameData extends SavedData {
         proposals.clear();
         ListTag prl = tag.getList("proposals", Tag.TAG_COMPOUND);
         for (int i = 0; i < prl.size(); i++) proposals.add(Proposal.load(prl.getCompound(i)));
+        casusBelli.clear();
+        ListTag cbl = tag.getList("cb", Tag.TAG_COMPOUND);
+        for (int i = 0; i < cbl.size(); i++) casusBelli.add(CasusBelli.load(cbl.getCompound(i)));
+        claimsInProgress.clear();
+        ListTag cll = tag.getList("claims", Tag.TAG_COMPOUND);
+        for (int i = 0; i < cll.size(); i++) claimsInProgress.add(CasusBelli.load(cll.getCompound(i)));
+        if (includeCells) {
+            people.clear();
+            ListTag pel = tag.getList("people", Tag.TAG_COMPOUND);
+            for (int i = 0; i < pel.size(); i++) {
+                Person p = Person.load(pel.getCompound(i));
+                people.put(p.id, p);
+            }
+            deceased.clear();
+            ListTag del = tag.getList("deceased", Tag.TAG_INT_ARRAY);
+            for (int i = 0; i < del.size(); i++) deceased.add(net.minecraft.nbt.NbtUtils.loadUUID(del.get(i)));
+        }
         nextNationId = Math.max(1, tag.getInt("nextNation"));
         nextProvinceId = Math.max(1, tag.getInt("nextProvince"));
         nextBuildingId = Math.max(1, tag.getInt("nextBuilding"));
@@ -386,6 +427,7 @@ public class GameData extends SavedData {
         tag.putLong("tick", gameTick);
         tag.putLong("start", startTick);
         tag.putLong("grace", graceTicks);
+        tag.putInt("session", session);
         tag.putBoolean("arena", arenaSet);
         tag.putInt("cx", centerX);
         tag.putInt("cz", centerZ);
@@ -408,6 +450,20 @@ public class GameData extends SavedData {
         ListTag prl = new ListTag();
         for (Proposal p : proposals) prl.add(p.save());
         tag.put("proposals", prl);
+        ListTag cbl = new ListTag();
+        for (CasusBelli c : casusBelli) cbl.add(c.save());
+        tag.put("cb", cbl);
+        ListTag cll = new ListTag();
+        for (CasusBelli c : claimsInProgress) cll.add(c.save());
+        tag.put("claims", cll);
+        if (includeCells) {
+            ListTag pel = new ListTag();
+            for (Person p : people.values()) pel.add(p.save());
+            tag.put("people", pel);
+            ListTag del = new ListTag();
+            for (UUID u : deceased) del.add(net.minecraft.nbt.NbtUtils.createUUID(u));
+            tag.put("deceased", del);
+        }
         tag.putInt("nextNation", nextNationId);
         tag.putInt("nextProvince", nextProvinceId);
         tag.putInt("nextBuilding", nextBuildingId);

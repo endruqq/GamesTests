@@ -27,7 +27,7 @@ public class SoldierRenderer extends HumanoidMobRenderer<SoldierEntity, PlayerMo
     }
 
     public SoldierRenderer(EntityRendererProvider.Context ctx) {
-        super(ctx, new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER), false), 0.5F);
+        super(ctx, new SurrenderModel(ctx.bakeLayer(ModelLayers.PLAYER)), 0.5F);
         addLayer(new NationTabardLayer<>(this, "tabard", SoldierEntity::getNationId));
         addLayer(new HumanoidArmorLayer<>(this, new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                 new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), ctx.getModelManager()));

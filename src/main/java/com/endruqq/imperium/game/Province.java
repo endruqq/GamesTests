@@ -14,6 +14,7 @@ public class Province {
     public double coreMaxHp;
     public long lastAttackTick = -100000;
     public int lastAttacker = -1;
+    public ProvinceResource resource = ProvinceResource.NONE;
 
     // ---- derived geometry (recomputed, also synced) ----
     public int cellCount;
@@ -36,6 +37,7 @@ public class Province {
         t.putDouble("maxHp", coreMaxHp);
         t.putLong("lastAtk", lastAttackTick);
         t.putInt("lastAtkBy", lastAttacker);
+        t.putInt("res", resource.ordinal());
         t.putInt("cells", cellCount);
         t.putDouble("cx", centroidX);
         t.putDouble("cz", centroidZ);
@@ -54,6 +56,7 @@ public class Province {
         p.coreMaxHp = t.getDouble("maxHp");
         p.lastAttackTick = t.getLong("lastAtk");
         p.lastAttacker = t.getInt("lastAtkBy");
+        p.resource = ProvinceResource.byOrdinal(t.getInt("res"));
         p.cellCount = t.getInt("cells");
         p.centroidX = t.getDouble("cx");
         p.centroidZ = t.getDouble("cz");

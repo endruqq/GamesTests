@@ -23,9 +23,9 @@ public class SoldierDefendGoal extends Goal {
     public boolean canUse() {
         int stamp = soldier.getLastHurtByMobTimestamp();
         LivingEntity attacker = soldier.getLastHurtByMob();
-        if (stamp == lastStamp || attacker == null || soldier.isRetreating()) return false;
+        if (stamp == lastStamp || attacker == null || soldier.isRetreating() || soldier.isSurrendered()) return false;
         GameData d = Game.data(soldier.level());
-        return d != null && Allegiance.isHostile(d, soldier.getNationId(), attacker, true);
+        return d != null && Allegiance.isHostileTo(d, soldier, attacker, true);
     }
 
     @Override
@@ -34,7 +34,7 @@ public class SoldierDefendGoal extends Goal {
         LivingEntity attacker = soldier.getLastHurtByMob();
         soldier.setTarget(attacker);
         for (SoldierEntity other : soldier.level().getEntitiesOfClass(SoldierEntity.class, soldier.getBoundingBox().inflate(12.0, 4.0, 12.0),
-                s -> s != soldier && s.getNationId() == soldier.getNationId() && s.getTarget() == null && s.canFight())) {
+                s -> s != soldier && s.getNationId() == soldier.getNationId() && s.getTarget() == null && s.canFight() && !s.isSurrendered())) {
             other.setTarget(attacker);
         }
     }

@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:planks",
+    "#minecraft:logs",
+    "#imperium:masonry",
+    "#minecraft:terracotta",
+    "minecraft:white_concrete",
+    "minecraft:light_gray_concrete",
+    "minecraft:gray_concrete",
+    "minecraft:bamboo_block",
+    "minecraft:bamboo_mosaic"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "imperium:steel_block"
+    }
+  ],
+  "result": {
+    "item": "imperium:steel_ingot",
+    "count": 9
+  }
+}

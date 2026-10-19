@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "S S",
+    "SSS",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "imperium:steel_ingot"
+    }
+  },
+  "result": {
+    "item": "imperium:steel_chestplate",
+    "count": 1
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "imperium:block/treasury_top",
+    "bottom": "imperium:block/treasury_top",
+    "side": "imperium:block/treasury_side"
+  }
+}

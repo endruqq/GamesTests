@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "imperium:block/province_core"
+    }
+  }
+}

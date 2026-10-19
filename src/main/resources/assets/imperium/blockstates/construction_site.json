@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "imperium:block/construction_site"
+    },
+    "active=true": {
+      "model": "imperium:block/construction_site_active"
+    }
+  }
+}

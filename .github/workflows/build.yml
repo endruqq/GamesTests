@@ -31,3 +31,13 @@ jobs:
           name: imperium-mod
           path: build/libs/*.jar
           if-no-files-found: error
+
+      - name: Run game tests
+        run: ./gradlew runGameTestServer --no-daemon
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gametest-logs
+          path: run/logs/

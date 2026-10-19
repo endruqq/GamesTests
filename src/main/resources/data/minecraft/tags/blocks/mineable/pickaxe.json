@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "imperium:treasury",
+    "imperium:steel_furnace",
+    "imperium:steel_block"
+  ]
+}

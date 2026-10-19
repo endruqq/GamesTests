@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:stone_crafting_materials",
+    "#minecraft:stone_tool_materials",
+    "minecraft:stone",
+    "minecraft:deepslate",
+    "minecraft:andesite",
+    "minecraft:diorite",
+    "minecraft:granite",
+    "minecraft:tuff",
+    "minecraft:sandstone",
+    "minecraft:red_sandstone",
+    "minecraft:stone_bricks",
+    "minecraft:smooth_stone",
+    "minecraft:bricks",
+    "minecraft:mossy_cobblestone",
+    "minecraft:calcite",
+    "minecraft:mud_bricks"
+  ]
+}

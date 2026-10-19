@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "#imperium:masonry",
+    "minecraft:deepslate",
+    "minecraft:andesite",
+    "minecraft:diorite",
+    "minecraft:granite",
+    "minecraft:tuff",
+    "minecraft:calcite"
+  ]
+}

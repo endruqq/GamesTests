@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    "S S",
+    "S S"
+  ],
+  "key": {
+    "S": {
+      "item": "imperium:steel_ingot"
+    }
+  },
+  "result": {
+    "item": "imperium:steel_leggings",
+    "count": 1
+  }
+}

@@ -33,6 +33,10 @@ minecraft {
 
         client {
             property 'forge.enabledGameTestNamespaces', mod_id
+            property 'imperium.autotest', System.getenv('IMPERIUM_AUTOTEST') ?: 'false'
+            if (System.getenv('IMPERIUM_AUTOTEST')) {
+                args '--width', '1280', '--height', '720'
+            }
         }
 
         server {

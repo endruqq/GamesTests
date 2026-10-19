@@ -41,3 +41,67 @@ jobs:
         with:
           name: gametest-logs
           path: run/logs/
+
+  client-test:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglu1-mesa > /dev/null
+
+      - name: Prepare client options
+        run: |
+          mkdir -p run
+          cat > run/options.txt <<'OPTS'
+          onboardAccessibility:false
+          tutorialStep:none
+          skipMultiplayerWarning:true
+          joinedFirstServer:true
+          pauseOnLostFocus:false
+          lang:pl_pl
+          guiScale:2
+          renderDistance:8
+          simulationDistance:8
+          soundCategory_master:0.0
+          OPTS
+
+      - name: Run scripted client
+        env:
+          IMPERIUM_AUTOTEST: 'true'
+        run: |
+          chmod +x ./gradlew
+          timeout 1500 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient --no-daemon || true
+          cat run/imperium_autotest.txt || true
+          grep -q "RESULT OK" run/imperium_autotest.txt
+
+      - name: Publish screenshots
+        if: always() && github.event_name == 'push'
+        run: |
+          mkdir -p docs/screenshots
+          cp run/screenshots/imperium_*.png docs/screenshots/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if ! git diff --cached --quiet; then git commit -m "Update client screenshots [skip ci]" && git push || true; fi
+
+      - name: Upload client logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-logs
+          path: run/logs/

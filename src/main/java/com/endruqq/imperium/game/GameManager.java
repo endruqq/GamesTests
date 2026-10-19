@@ -294,14 +294,17 @@ public final class GameManager {
         }));
         BlockPos fallback = null;
         int tries = 0;
-        for (int[] c : cells) {
-            // prefer cells whose neighbours are in the same province (tower fully inside)
+        // nearest cells first, then a coarse sweep over the whole province looking for dry land
+        int stride = Math.max(1, cells.size() / 30);
+        for (int i = 0; i < cells.size(); i += (i < 12 ? 1 : stride)) {
+            int[] c = cells.get(i);
             int x = (int) Math.floor(d.cellCenterX(c[0]));
             int z = (int) Math.floor(d.cellCenterZ(c[1]));
             BlockPos ground = TowerBuilder.groundAt(level, x, z);
             if (fallback == null) fallback = ground;
-            if (!TowerBuilder.isWater(level, ground)) return ground;
-            if (++tries > 25) break;
+            if (!TowerBuilder.isWater(level, ground) && !TowerBuilder.isWater(level, ground.offset(4, 0, 4))
+                    && !TowerBuilder.isWater(level, ground.offset(-4, 0, -4))) return ground;
+            if (++tries > 45) break;
         }
         return fallback != null ? fallback : TowerBuilder.groundAt(level, (int) cx, (int) cz);
     }

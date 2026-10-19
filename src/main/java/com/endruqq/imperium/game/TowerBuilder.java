@@ -42,10 +42,11 @@ public final class TowerBuilder {
         BlockState cracked = Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
         BlockState floor = Blocks.POLISHED_ANDESITE.defaultBlockState();
         var rnd = level.random;
-        // clear & foundation (one block wider than the tower)
-        for (int dx = -half - 1; dx <= half + 1; dx++) {
-            for (int dz = -half - 1; dz <= half + 1; dz++) {
-                for (int y = 0; y <= height + 4; y++) level.setBlock(base.offset(dx, y, dz), Blocks.AIR.defaultBlockState(), FLAGS);
+        // clear & foundation (a platform three blocks wider than the tower)
+        for (int dx = -half - 3; dx <= half + 3; dx++) {
+            for (int dz = -half - 3; dz <= half + 3; dz++) {
+                boolean inner = Math.max(Math.abs(dx), Math.abs(dz)) <= half + 1;
+                for (int y = 0; y <= (inner ? height + 4 : 3); y++) level.setBlock(base.offset(dx, y, dz), Blocks.AIR.defaultBlockState(), FLAGS);
                 level.setBlock(base.offset(dx, -1, dz), (Math.max(Math.abs(dx), Math.abs(dz)) > half ? Blocks.COBBLESTONE : Blocks.STONE_BRICKS)
                         .defaultBlockState(), FLAGS);
                 for (int y = -2; y >= -40; y--) {

@@ -21,7 +21,7 @@ import java.util.List;
 
 /** The technology ("skill") tree. */
 public class TechTreeScreen extends Screen implements RtsChild {
-    private static final int NODE_W = 112;
+    private int NODE_W = 112;
     private static final int NODE_H = 30;
     private final Screen parent;
     private int gridX, gridY, colStep, rowStep;
@@ -38,7 +38,8 @@ public class TechTreeScreen extends Screen implements RtsChild {
 
     @Override
     protected void init() {
-        colStep = Math.max(NODE_W + 8, Math.min(NODE_W + 40, (width - 20) / 6));
+        NODE_W = Math.max(64, Math.min(112, (width - 16) / 6 - 6));
+        colStep = Math.max(NODE_W + 6, Math.min(NODE_W + 40, (width - 16 - NODE_W) / 5));
         rowStep = Math.max(NODE_H + 14, Math.min(NODE_H + 40, (height - 70) / 4));
         int totalW = colStep * 5 + NODE_W;
         gridX = (width - totalW) / 2;

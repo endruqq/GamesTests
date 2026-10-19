@@ -103,11 +103,9 @@ public final class WorldOverlayRenderer {
                 double dx = p.core.getX() - cam.x, dz = p.core.getZ() - cam.z;
                 if (dx * dx + dz * dz > 220 * 220) continue;
                 float[] c = ClientState.rgbOf(p.owner);
-                for (int k = 0; k < 3; k++) {
-                    double off = 0.4 + k * 0.1;
-                    LevelRenderer.renderLineBox(pose, lines, new AABB(p.core.getX() + 0.5 - off, p.core.getY() + 1, p.core.getZ() + 0.5 - off,
-                            p.core.getX() + 0.5 + off, p.core.getY() + 40, p.core.getZ() + 0.5 + off), c[0], c[1], c[2], 0.8F);
-                }
+                double off = 0.3;
+                LevelRenderer.renderLineBox(pose, lines, new AABB(p.core.getX() + 0.5 - off, p.core.getY() + 16, p.core.getZ() + 0.5 - off,
+                        p.core.getX() + 0.5 + off, p.core.getY() + 48, p.core.getZ() + 0.5 + off), c[0], c[1], c[2], 0.7F);
             }
         }
         pose.popPose();

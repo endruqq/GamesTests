@@ -43,7 +43,7 @@ public final class DialogManager {
         }
         if (n.famine) m.add("famine");
         if (d.atWarWithAnyone(n.id)) m.add("war");
-        if (!n.famine && n.lastDelta.get(ResourceType.FOOD) < 0) m.add("hungry");
+        if (!n.famine && n.lastDelta.get(ResourceType.FOOD) < 0 && n.stock.get(ResourceType.FOOD) < n.population * 4) m.add("hungry");
         if (n.population > n.housing) m.add("homeless");
         if (n.happiness < 30) m.add("unhappy");
         if (n.abundant()) m.add("abundant");

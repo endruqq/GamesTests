@@ -87,6 +87,10 @@ public final class BuildingManager {
             if (feedback != null) feedback.displayClientMessage(err.copy().withStyle(ChatFormatting.RED), true);
             return false;
         }
+        if (!prefab && !level.getBlockState(pos.below()).getFluidState().isEmpty()) {
+            if (feedback != null) feedback.displayClientMessage(Component.translatable("imperium.err.water").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
         if (prefab) n.stock.subtract(type.prefabCost);
 
         Building b = new Building();

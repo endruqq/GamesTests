@@ -65,20 +65,27 @@ public final class HudOverlay {
             return;
         }
         int panelH = n == null ? 24 : 46;
-        UiUtil.panel(g, x - 2, y - 2, 210, panelH);
+        String stats = n == null ? "" : "☺ " + (int) n.happiness + "%  ⌂ " + n.population + "/" + n.housing + "  ⚔ " + n.soldierCount;
+        int panelW = 210;
+        if (n != null) {
+            panelW = Math.max(panelW, 19 + font.width(n.name) + font.width(stats));
+            int rw = 4;
+            for (ResourceType t : ResourceType.values()) rw += 16 + font.width(String.valueOf(n.stock.getInt(t)));
+            panelW = Math.max(panelW, rw);
+        }
+        UiUtil.panel(g, x - 2, y - 2, panelW, panelH);
         if (n == null) {
             g.drawString(font, Component.translatable("imperium.hud.no_nation"), x, y, 0xFFAAAAAA);
         } else {
             g.fill(x, y, x + 8, y + 8, 0xFF000000 | n.rgb());
             g.drawString(font, n.name, x + 11, y, 0xFFFFFF);
-            String stats = "☺ " + (int) n.happiness + "%   ⌂ " + n.population + "/" + n.housing + "   ⚔ " + n.soldierCount;
             g.drawString(font, stats, x + 11 + font.width(n.name) + 6, y, n.happiness < 30 ? 0xFFFF6060 : 0xFFB0FFB0);
             int ix = x;
             for (ResourceType t : ResourceType.values()) {
                 UiUtil.smallItem(g, t.icon(), ix, y + 22);
                 String v = String.valueOf(n.stock.getInt(t));
                 g.drawString(font, v, ix + 9, y + 23, t == ResourceType.FOOD && n.famine ? 0xFFFF4040 : 0xFFEEEEEE);
-                ix += 12 + font.width(v) + 4;
+                ix += 16 + font.width(v);
             }
             if (n.famine) g.drawString(font, Component.translatable("imperium.hud.famine").withStyle(ChatFormatting.RED), x, y + 33, 0xFFFFFF);
             else if (d.inGracePeriod()) g.drawString(font, Component.translatable("imperium.hud.grace", UiUtil.time(ClientState.graceSeconds())), x, y + 33, 0xFF9AD0FF);

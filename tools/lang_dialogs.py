@@ -10,7 +10,7 @@ D = {
     "greet.famine": [
         ("Please... a crust of bread, %1$s. Anything.", "Proszę... choć skórkę chleba, %1$s. Cokolwiek."),
         ("I boiled my boots yesterday. Today I'm eyeing the laces.", "Wczoraj ugotowałem buty. Dziś łakomie spoglądam na sznurówki."),
-        ("Forgive me if I faint mid-sentence. The granaries of %2$s are empty.", "Wybacz, jeśli zemdleję w pół zdania. Spichlerze %2$s świecą pustkami."),
+        ("Forgive me if I faint mid-sentence. The granaries of %2$s are empty.", "Wybacz, jeśli zemdleję w pół zdania. %2$s ma puste spichlerze."),
         ("We buried three neighbours this week. Hunger doesn't knock before it enters.", "W tym tygodniu pochowaliśmy trzech sąsiadów. Głód nie puka, zanim wejdzie."),
     ],
     "greet.hungry": [
@@ -19,8 +19,8 @@ D = {
         ("My stomach growls louder than the army drums.", "Mój brzuch burczy głośniej niż wojskowe bębny."),
     ],
     "greet.war": [
-        ("Keep your voice down, %1$s! Spies of %3$s are everywhere.", "Ciszej, %1$s! Wszędzie kręcą się szpiedzy z %3$s."),
-        ("Is it true the army of %3$s is marching on %5$s?", "Czy to prawda, że wojska %3$s maszerują na %5$s?"),
+        ("Keep your voice down, %1$s! Spies of %3$s are everywhere.", "Ciszej, %1$s! Wszędzie kręcą się szpiedzy. Podobno nasyła ich %3$s."),
+        ("Is it true the army of %3$s is marching on %5$s?", "Czy to prawda, że %3$s szykuje atak na naszą prowincję?"),
         ("My son went to the front. I sharpen my scythe every evening, just in case.", "Mój syn poszedł na front. Co wieczór ostrzę kosę, tak na wszelki wypadek."),
     ],
     "greet.homeless": [
@@ -34,30 +34,30 @@ D = {
         ("Don't mind me, I'm just quietly contemplating a revolution.", "Nie zwracaj na mnie uwagi, po cichu rozważam rewolucję."),
     ],
     "greet.abundant": [
-        ("Ah, %1$s! Have a sausage. Have two! The cellars of %2$s are bursting!", "Ach, %1$s! Weź kiełbaskę. Weź dwie! Piwnice %2$s pękają w szwach!"),
-        ("Three dinners a day and a nap in between. Life in %2$s is good!", "Trzy obiady dziennie i drzemka pomiędzy. W %2$s żyje się dobrze!"),
+        ("Ah, %1$s! Have a sausage. Have two! The cellars of %2$s are bursting!", "Ach, %1$s! Weź kiełbaskę. Weź dwie! Piwnice pękają w szwach!"),
+        ("Three dinners a day and a nap in between. Life in %2$s is good!", "Trzy obiady dziennie i drzemka pomiędzy. %2$s to raj na ziemi!"),
         ("I've put on so much weight my horse filed for retirement.", "Tak przytyłem, że mój koń złożył wniosek o emeryturę."),
     ],
     "greet.happy": [
-        ("What a lovely day in %5$s! Even the cows are smiling.", "Co za piękny dzień w %5$s! Nawet krowy się uśmiechają."),
+        ("What a lovely day in %5$s! Even the cows are smiling.", "Co za piękny dzień, %1$s! Nawet krowy się uśmiechają."),
         ("Good day, %1$s! Long live %2$s!", "Dzień dobry, %1$s! Niech żyje %2$s!"),
         ("I'd sing, but my neighbours have suffered enough.", "Zaśpiewałbym, ale sąsiedzi już dość wycierpieli."),
     ],
     "greet.normal": [
         ("Good day to you, %1$s.", "Szczęść Boże, %1$s."),
         ("Name's %4$s. Need something?", "Jestem %4$s. Potrzebujesz czegoś?"),
-        ("Another day in %5$s. Same mud, same chickens.", "Kolejny dzień w %5$s. To samo błoto, te same kury."),
+        ("Another day in %5$s. Same mud, same chickens.", "Kolejny dzień. To samo błoto, te same kury."),
         ("Mind the cow pie, %1$s.", "Uważaj na krowi placek, %1$s."),
     ],
     "greet.foreign": [
-        ("A traveller from afar! What brings you to %2$s?", "Podróżny z daleka! Co cię sprowadza do %2$s?"),
+        ("A traveller from afar! What brings you to %2$s?", "Podróżny z daleka! Co cię tu sprowadza? Tu rządzi %2$s."),
         ("You talk funny. Not from around here, are you?", "Śmiesznie mówisz. Nie jesteś stąd, co?"),
-        ("Welcome to %2$s, stranger. Wipe your boots.", "Witaj w %2$s, obcy. Wytrzyj buty."),
+        ("Welcome to %2$s, stranger. Wipe your boots.", "Witaj, obcy. Tu jest %2$s, więc wytrzyj buty."),
     ],
     "greet.enemy": [
         ("Don't hurt me! I'm just a simple peasant!", "Nie rób mi krzywdy! Jestem tylko prostym chłopem!"),
         ("Invaders! Mother, hide the goat!", "Najeźdźcy! Mamo, chowaj kozę!"),
-        ("You won't break the spirit of %2$s! ...Please don't break anything else either.", "Nie złamiecie ducha %2$s! ...Proszę, niczego innego też nie łamcie."),
+        ("You won't break the spirit of %2$s! ...Please don't break anything else either.", "%2$s się nie podda! ...Proszę, tylko niczego nie łamcie."),
     ],
 
     # ------------------------------------------------------------------ how are you
@@ -65,7 +65,7 @@ D = {
         ("How am I? I ate grass this morning. It tasted like regret.", "Jak się mam? Rano jadłem trawę. Smakowała jak żal."),
         ("My children ask for bread and I tell them stories about bread.", "Dzieci proszą o chleb, a ja opowiadam im bajki o chlebie."),
         ("Old Wojtek died last night. We buried him with his spoon. He would have wanted that.", "Stary Wojtek zmarł w nocy. Pochowaliśmy go z łyżką. Tak by chciał."),
-        ("If the ruler of %2$s doesn't build farms soon, there won't be anyone left to tax.", "Jeśli władca %2$s szybko nie zbuduje farm, nie będzie już kogo opodatkować."),
+        ("If the ruler of %2$s doesn't build farms soon, there won't be anyone left to tax.", "Jeśli władca szybko nie zbuduje farm, nie będzie już kogo opodatkować."),
     ],
     "how.hungry": [
         ("Hungry, but alive. Mostly.", "Głodny, ale żywy. W większości."),
@@ -73,7 +73,7 @@ D = {
         ("Could be worse. Could be raining. Oh wait, it is.", "Mogło być gorzej. Mógłby padać deszcz. A nie, pada."),
     ],
     "how.war": [
-        ("I can't sleep. Every night I hear drums from the border with %3$s.", "Nie mogę spać. Co noc słyszę bębny od granicy z %3$s."),
+        ("I can't sleep. Every night I hear drums from the border with %3$s.", "Nie mogę spać. Co noc słyszę bębny zza granicy. Mówią, że to %3$s."),
         ("They took my horse for the cavalry. I hope he's a general by now.", "Zabrali mi konia do kawalerii. Mam nadzieję, że jest już generałem."),
         ("If %3$s comes here, I've got a pitchfork and a very bad temper.", "Jeśli %3$s tu przyjdzie, mam widły i bardzo zły charakter."),
         ("My brother died defending the tower. Make it count, %1$s.", "Mój brat zginął, broniąc wieży. Niech to nie pójdzie na marne, %1$s."),
@@ -84,7 +84,7 @@ D = {
         ("The ruler should build houses, not monuments to their own ego.", "Władca powinien budować domy, a nie pomniki własnego ego."),
     ],
     "how.unhappy": [
-        ("Taxes, mud and boredom. The holy trinity of %2$s.", "Podatki, błoto i nuda. Święta trójca %2$s."),
+        ("Taxes, mud and boredom. The holy trinity of %2$s.", "Podatki, błoto i nuda. Nasza święta trójca."),
         ("Some say we should march on the capital with torches. I'm just repeating what some say.", "Niektórzy mówią, żeby iść na stolicę z pochodniami. Ja tylko powtarzam, co mówią."),
         ("Even the priest stopped praying for the ruler. Now he prays for us.", "Nawet ksiądz przestał się modlić za władcę. Teraz modli się za nas."),
     ],
@@ -96,7 +96,7 @@ D = {
     "how.happy": [
         ("Couldn't be better! I got married last week. To the miller's daughter. Or the miller. I was drunk.",
          "Lepiej być nie może! W zeszłym tygodniu się ożeniłem. Z córką młynarza. Albo z młynarzem. Byłem pijany."),
-        ("Life is good in %2$s. Even the taxes feel almost voluntary.", "W %2$s żyje się dobrze. Nawet podatki są prawie dobrowolne."),
+        ("Life is good in %2$s. Even the taxes feel almost voluntary.", "%2$s to dobre miejsce do życia. Nawet podatki są prawie dobrowolne."),
         ("Happy as a pig in mud, %1$s!", "Szczęśliwy jak świnia w błocie, %1$s!"),
     ],
     "how.normal": [
@@ -107,7 +107,7 @@ D = {
     ],
     "how.foreign": [
         ("Fine, until your countrymen start trouble.", "Dobrze, dopóki twoi rodacy nie narobią kłopotów."),
-        ("Life in %2$s is quiet. Let's keep it that way, yes?", "W %2$s jest spokojnie. Niech tak zostanie, dobrze?"),
+        ("Life in %2$s is quiet. Let's keep it that way, yes?", "%2$s to spokojna kraina. Niech tak zostanie, dobrze?"),
     ],
     "how.enemy": [
         ("How am I? Your people are burning my village! How do you think?!", "Jak się mam? Wasi palą mi wioskę! A jak myślisz?!"),
@@ -116,18 +116,18 @@ D = {
 
     # ------------------------------------------------------------------ jokes
     "joke.famine": [
-        ("Why does everyone in %2$s stand so straight? Nothing in our stomachs to weigh us down.", "Czemu w %2$s wszyscy mają taką prostą postawę? Nic nie ciąży w brzuchu."),
+        ("Why does everyone in %2$s stand so straight? Nothing in our stomachs to weigh us down.", "Czemu u nas wszyscy mają taką prostą postawę? Nic nie ciąży w brzuchu."),
         ("My diet is going great. Not by choice.", "Moja dieta idzie świetnie. Nie z wyboru."),
         ("What's for dinner? A story about dinner.", "Co na obiad? Opowieść o obiedzie."),
     ],
     "joke.war": [
-        ("How many soldiers of %3$s does it take to light a torch? None, they're afraid of the dark.", "Ilu żołnierzy %3$s trzeba, żeby zapalić pochodnię? Żadnego, boją się ciemności."),
-        ("The army of %3$s is so slow that snails overtake it on the way to battle.", "Armia %3$s jest tak wolna, że ślimaki wyprzedzają ją w drodze na bitwę."),
+        ("How many soldiers of %3$s does it take to light a torch? None, they're afraid of the dark.", "Ilu żołnierzy wroga trzeba, żeby zapalić pochodnię? Żadnego, boją się ciemności."),
+        ("The army of %3$s is so slow that snails overtake it on the way to battle.", "Wojsko, które wystawia %3$s, jest tak wolne, że ślimaki wyprzedzają je w drodze na bitwę."),
         ("Our general shouted: shields up! So we sold them. Prices were up.", "Generał krzyknął: tarcze w górę! No to sprzedaliśmy. Ceny poszły w górę."),
     ],
     "joke.unhappy": [
         ("What's the difference between our ruler and a creeper? The creeper only blows up your house once.", "Czym różni się nasz władca od creepera? Creeper wysadza ci dom tylko raz."),
-        ("Taxes in %2$s are like rain. Constant, cold, and nobody ordered them.", "Podatki w %2$s są jak deszcz. Ciągłe, zimne i nikt ich nie zamawiał."),
+        ("Taxes in %2$s are like rain. Constant, cold, and nobody ordered them.", "Nasze podatki są jak deszcz. Ciągłe, zimne i nikt ich nie zamawiał."),
     ],
     "joke.normal": [
         ("Why didn't the skeleton join the army? It had no guts.", "Czemu szkielet nie poszedł do wojska? Nie miał odwagi. Ani flaków."),
@@ -137,7 +137,7 @@ D = {
         ("I asked the librarian for a book about Nether portals. She said it's out of this world.", "Poprosiłem bibliotekarkę o książkę o portalach do Netheru. Powiedziała, że to nie z tego świata."),
     ],
     "joke.abundant": [
-        ("We eat so much in %2$s that our sheep went on a diet out of solidarity.", "W %2$s jemy tyle, że owce przeszły na dietę z solidarności."),
+        ("We eat so much in %2$s that our sheep went on a diet out of solidarity.", "Jemy tyle, że owce przeszły na dietę z solidarności."),
         ("Our bard ate his lute. It was made of gingerbread. Good times.", "Nasz bard zjadł lutnię. Była z piernika. Piękne czasy."),
     ],
 
@@ -160,10 +160,10 @@ D = {
     ],
     "work.smith": [
         ("Iron goes in, steel comes out, and my eyebrows go missing.", "Żelazo wchodzi, stal wychodzi, a moje brwi znikają."),
-        ("The smeltery makes the best steel in %2$s. And the worst air.", "Huta robi najlepszą stal w %2$s. I najgorsze powietrze."),
+        ("The smeltery makes the best steel in %2$s. And the worst air.", "Huta robi najlepszą stal w kraju. I najgorsze powietrze."),
     ],
     "work.merchant": [
-        ("Buy low, sell high, and never trust anyone from %3$s.", "Kupuj tanio, sprzedawaj drogo i nigdy nie ufaj nikomu z %3$s."),
+        ("Buy low, sell high, and never trust anyone from %3$s.", "Kupuj tanio, sprzedawaj drogo i nigdy nie ufaj kupcom, których przysyła %3$s."),
         ("I sell emeralds, carpets and slightly used horses.", "Sprzedaję szmaragdy, dywany i lekko używane konie."),
     ],
     "work.scholar": [
@@ -186,19 +186,19 @@ D = {
     ],
     "news.rich": [
         ("They say the treasury is full of gold. I've never seen any of it, but it's nice to know.", "Mówią, że skarbiec jest pełen złota. Nigdy go nie widziałem, ale miło wiedzieć."),
-        ("Merchants from %3$s come to trade with us. We must be doing something right.", "Kupcy z %3$s przyjeżdżają z nami handlować. Musimy coś robić dobrze."),
+        ("Merchants from %3$s come to trade with us. We must be doing something right.", "%3$s przysyła do nas kupców. Musimy coś robić dobrze."),
     ],
     "news.peace": [
         ("Nothing happens here. The last big news was a cow escaping.", "Nic się tu nie dzieje. Ostatnia wielka wiadomość to ucieczka krowy."),
-        ("Peace with %3$s holds. For now. Peace is just a deep breath before the shouting.", "Pokój z %3$s trwa. Na razie. Pokój to tylko głęboki wdech przed krzykiem."),
+        ("Peace with %3$s holds. For now. Peace is just a deep breath before the shouting.", "Pokój trwa, a %3$s na razie siedzi cicho. Pokój to tylko głęboki wdech przed krzykiem."),
     ],
     "news.lost": [
         ("We lost a province. Grandma says it's the first time since the Great Pig Plague.", "Straciliśmy prowincję. Babcia mówi, że pierwszy raz od Wielkiej Zarazy Świń."),
         ("Refugees keep coming from the border. They have nothing left but stories.", "Z pogranicza wciąż przychodzą uciekinierzy. Zostały im tylko opowieści."),
     ],
     "news.ally": [
-        ("We're allied with %3$s now. Their bread is terrible, but their swords are sharp.", "Jesteśmy teraz w sojuszu z %3$s. Chleb mają okropny, ale miecze ostre."),
-        ("An envoy from %3$s came by. Wore a hat taller than our church.", "Przybył poseł z %3$s. Miał kapelusz wyższy niż nasz kościół."),
+        ("We're allied with %3$s now. Their bread is terrible, but their swords are sharp.", "Mamy sojusznika: %3$s. Chleb mają okropny, ale miecze ostre."),
+        ("An envoy from %3$s came by. Wore a hat taller than our church.", "Przybył poseł, którego wysłało nam %3$s. Miał kapelusz wyższy niż nasz kościół."),
     ],
     "news.strongest": [
         ("Word is %3$s is the mightiest realm around. Makes you nervous.", "Mówią, że %3$s to najpotężniejsze państwo w okolicy. Człowiek się denerwuje."),
@@ -213,7 +213,7 @@ D = {
     "ruler.love": [
         ("Our ruler? A saint! Low taxes, full plates. Long may they reign!", "Nasz władca? Święty! Niskie podatki, pełne talerze. Niech panuje wiecznie!"),
         ("I hung a portrait of the ruler above my bed. My wife is jealous.", "Powiesiłem portret władcy nad łóżkiem. Żona jest zazdrosna."),
-        ("The best ruler %2$s ever had. Don't tell the previous one.", "Najlepszy władca, jakiego %2$s miało. Tylko nie mów poprzedniemu."),
+        ("The best ruler %2$s ever had. Don't tell the previous one.", "Najlepszy władca w historii. Tylko nie mów poprzedniemu."),
     ],
     "ruler.ok": [
         ("Could be worse. The last one fed the treasury to a dragon.", "Mogło być gorzej. Poprzedni karmił skarbem smoka."),
@@ -228,7 +228,7 @@ D = {
 
     # ------------------------------------------------------------------ recruitment
     "recruit.yes.normal": [
-        ("For %2$s! Where do I get my sword? Is it pointy?", "Za %2$s! Gdzie dostanę miecz? Czy jest ostry?"),
+        ("For %2$s! Where do I get my sword? Is it pointy?", "Niech żyje %2$s! Gdzie dostanę miecz? Czy jest ostry?"),
         ("Fine, fine. Anything to get away from my mother-in-law.", "Dobra, dobra. Wszystko, byle uciec od teściowej."),
     ],
     "recruit.yes.famine": [
@@ -236,8 +236,8 @@ D = {
         ("I'd fight a dragon for a bowl of soup. Sign me up.", "Za miskę zupy pobiłbym się ze smokiem. Zapisuj mnie."),
     ],
     "recruit.yes.war": [
-        ("%3$s burned my father's farm. Give me a spear.", "%3$s spaliło farmę mojego ojca. Daj mi włócznię."),
-        ("I'll defend %5$s with my life! ...Hopefully not with all of it.", "Będę bronił %5$s własnym życiem! ...Oby nie całym."),
+        ("%3$s burned my father's farm. Give me a spear.", "Wróg spalił farmę mojego ojca. Daj mi włócznię."),
+        ("I'll defend %5$s with my life! ...Hopefully not with all of it.", "Będę bronił tej prowincji własnym życiem! ...Oby nie całym."),
     ],
     "recruit.yes.happy": [
         ("Why not! Adventure, glory, a free helmet!", "Czemu nie! Przygoda, chwała, darmowy hełm!"),
@@ -264,7 +264,7 @@ D = {
         ("They say the army is full. Not even room for a drummer.", "Mówią, że wojsko jest pełne. Nie ma miejsca nawet dla dobosza."),
     ],
     "recruit.foreign": [
-        ("Join YOUR army? I'm loyal to %2$s, thank you very much.", "Do TWOJEGO wojska? Jestem wierny %2$s, bardzo dziękuję."),
+        ("Join YOUR army? I'm loyal to %2$s, thank you very much.", "Do TWOJEGO wojska? Tu rządzi %2$s i jestem mu wierny, bardzo dziękuję."),
         ("Nice try, stranger.", "Niezła próba, obcy."),
     ],
 
@@ -284,7 +284,7 @@ D = {
     ],
     "gift.foreign": [
         ("A gift from a foreigner? Maybe your people aren't so bad after all.", "Prezent od obcego? Może twoi ludzie nie są jednak tacy źli."),
-        ("Thank you, stranger. I'll tell everyone in %2$s about your kindness.", "Dziękuję, obcy. Opowiem w całym %2$s o twojej dobroci."),
+        ("Thank you, stranger. I'll tell everyone in %2$s about your kindness.", "Dziękuję, obcy. Opowiem wszystkim sąsiadom o twojej dobroci."),
     ],
 
     # ------------------------------------------------------------------ threats (enemy citizens)
@@ -313,7 +313,7 @@ D = {
     "soldier.greet.war": [
         ("Give the word and we'll march on the enemy!", "Daj tylko znak, a ruszymy na wroga!"),
         ("My blade is sharp and my nerves are... mostly fine.", "Ostrze mam ostre, a nerwy... w większości w porządku."),
-        ("For %2$s! Point me at the enemy.", "Za %2$s! Wskaż mi wroga."),
+        ("For %2$s! Point me at the enemy.", "Niech żyje %2$s! Wskaż mi wroga."),
     ],
     "soldier.greet.famine": [
         ("Commander... can we fight on empty stomachs? Asking for the whole regiment.", "Dowódco... czy da się walczyć na pusty żołądek? Pytam w imieniu całego oddziału."),
@@ -363,16 +363,16 @@ D = {
     ],
     "soldier.morale.unpaid": [
         ("No pay for weeks. The men are selling their arrows.", "Od tygodni bez żołdu. Ludzie sprzedają strzały."),
-        ("We fight for %2$s... but %2$s should pay us.", "Walczymy za %2$s... ale %2$s powinno nam płacić."),
+        ("We fight for %2$s... but %2$s should pay us.", "Walczymy za ojczyznę... ale ojczyzna powinna nam płacić."),
     ],
     "soldier.enemy": [
-        ("Get lost, dog of %3$s!", "Precz, psie z %3$s!"),
+        ("Get lost, dog of %3$s!", "Precz, psie! Wracaj tam, gdzie rządzi %3$s!"),
         ("You'll get nothing from me but cold steel.", "Ode mnie dostaniesz tylko zimną stal."),
         ("%2$s will never kneel!", "%2$s nigdy nie uklęknie!"),
     ],
     "soldier.foreign": [
-        ("Move along, citizen of %3$s.", "Przejdź dalej, obywatelu %3$s."),
+        ("Move along, citizen of %3$s.", "Przejdź dalej, przybyszu."),
         ("I'm on duty. No chit-chat.", "Jestem na służbie. Bez pogaduszek."),
-        ("Nice armour. Is it from %3$s? Ours is better.", "Ładna zbroja. Z %3$s? Nasze są lepsze."),
+        ("Nice armour. Is it from %3$s? Ours is better.", "Ładna zbroja. Nasze i tak są lepsze."),
     ],
 }

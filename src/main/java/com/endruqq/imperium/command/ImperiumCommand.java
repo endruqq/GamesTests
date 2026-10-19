@@ -111,6 +111,15 @@ public final class ImperiumCommand {
                                     d.markChanged();
                                     return 1;
                                 }))))
+                .then(Commands.literal("grace").requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 86400)).executes(c -> {
+                            GameData d = GameData.get(c.getSource().getServer());
+                            int sec = IntegerArgumentType.getInteger(c, "seconds");
+                            d.graceTicks = Math.max(0, d.gameTick - d.startTick) + sec * 20L;
+                            d.markChanged();
+                            c.getSource().sendSuccess(() -> Component.translatable("imperium.msg.grace_set", sec), true);
+                            return 1;
+                        })))
                 .then(Commands.literal("research").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("all").executes(c -> {
                             GameData d = GameData.get(c.getSource().getServer());

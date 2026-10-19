@@ -34,6 +34,8 @@ public final class ActionHandler {
                     if (type == null || player.level() != level) return;
                     BlockPos pos = BlockPos.of(t.getLong("pos"));
                     if (pos.distSqr(player.blockPosition()) > 400 * 400) return;
+                    pos = new BlockPos(pos.getX(), level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            pos.getX(), pos.getZ()), pos.getZ());
                     BuildingManager.place(level, player, type, pos, t.getBoolean("prefab"), Direction.from2DDataValue(t.getInt("facing")));
                 }
                 case "demolish" -> BuildingManager.demolish(level, player, t.getInt("id"));

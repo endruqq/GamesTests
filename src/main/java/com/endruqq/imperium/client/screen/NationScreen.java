@@ -210,7 +210,8 @@ public class NationScreen extends Screen implements RtsChild {
         g.fill(x, y, x + 10, y + 10, 0xFF000000 | n.rgb());
         g.drawString(font, n.name + (n.bot ? " [BOT]" : ""), x + 14, y + 1, 0xFFFFD700);
         y += 18;
-        g.drawString(font, Component.translatable("imperium.ui.tax"), left + w - 170, top + 9, 0xFFCCCCCC);
+        Component taxLabel = Component.translatable("imperium.ui.tax");
+        g.drawString(font, taxLabel, left + w - 6 - 3 * 54 - font.width(taxLabel) - 4, top + 9, 0xFFCCCCCC);
         int col2 = left + w / 2 + 4;
         line(g, x, y, Component.translatable("imperium.ui.stat.population", n.population, n.housing), n.population > n.housing ? 0xFFFF7070 : 0xFFFFFFFF);
         line(g, col2, y, Component.translatable("imperium.ui.stat.happiness", (int) n.happiness, (int) n.happinessTarget),

@@ -172,31 +172,62 @@ public final class ClientAutotest {
             case 7 -> {
                 shot(mc, "02_rts_view");
                 RtsScreen.placement = null;
-                mc.screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_M, 0, 0);
-                wait = 60;
+                placePrefabs(mc);
+                wait = 80;
                 step++;
             }
             case 8 -> {
-                shot(mc, "03_strategic_map");
+                if (!PLACED.isEmpty()) {
+                    BlockPos first = PLACED.get(0);
+                    RtsCamera.lookAt(first.getX(), first.getZ() + 6);
+                    RtsCamera.height = 30;
+                }
+                wait = 60;
+                step = 80;
+            }
+            case 80 -> {
+                shot(mc, "03_rts_buildings");
+                mc.screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_M, 0, 0);
+                wait = 60;
+                step = 81;
+            }
+            case 81 -> {
+                shot(mc, "04_strategic_map");
+                cmd(mc, "imperium grace 0");
+                Nation me = ClientState.myNation();
+                for (Nation o : ClientState.data.nations.values()) {
+                    if (me != null && o.id != me.id) {
+                        CompoundTag t = new CompoundTag();
+                        t.putInt("target", o.id);
+                        t.putInt("action", com.endruqq.imperium.game.DiplomacyManager.Action.DECLARE_WAR.ordinal());
+                        ImperiumNet.sendToServer(new ActionPacket("diplomacy", t));
+                        break;
+                    }
+                }
+                wait = 60;
+                step = 82;
+            }
+            case 82 -> {
+                shot(mc, "05_war_map");
                 mc.screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_M, 0, 0);
                 mc.setScreen(new TechTreeScreen(mc.screen));
                 wait = 30;
-                step++;
+                step = 9;
             }
             case 9 -> {
-                shot(mc, "04_tech_tree");
+                shot(mc, "06_tech_tree");
                 mc.setScreen(new NationScreen(null, 0));
                 wait = 30;
                 step++;
             }
             case 10 -> {
-                shot(mc, "05_nation");
+                shot(mc, "07_nation");
                 mc.setScreen(new NationScreen(null, 1));
                 wait = 30;
                 step++;
             }
             case 11 -> {
-                shot(mc, "06_diplomacy");
+                shot(mc, "08_diplomacy");
                 mc.setScreen(null);
                 CitizenEntity c = nearest(mc, CitizenEntity.class);
                 if (c != null) {
@@ -218,7 +249,7 @@ public final class ClientAutotest {
                 step++;
             }
             case 13 -> {
-                shot(mc, mc.screen instanceof DialogScreen ? "07_dialog" : "07_no_dialog");
+                shot(mc, mc.screen instanceof DialogScreen ? "09_dialog" : "09_no_dialog");
                 if (mc.screen instanceof DialogScreen) {
                     CompoundTag t = new CompoundTag();
                     Entity c = nearest(mc, CitizenEntity.class);
@@ -230,7 +261,7 @@ public final class ClientAutotest {
                 step++;
             }
             case 14 -> {
-                shot(mc, "08_dialog_joke");
+                shot(mc, "10_dialog_joke");
                 mc.setScreen(null);
                 // a construction site next to the capital, then stand inside it
                 Nation n = ClientState.myNation();
@@ -244,7 +275,9 @@ public final class ClientAutotest {
                     for (int a = 0; a < 16 && best == null; a++) {
                         int x = cap.core.getX() + (int) (Math.cos(a * Math.PI / 8) * r);
                         int z = cap.core.getZ() + (int) (Math.sin(a * Math.PI / 8) * r);
+                        if (!mc.level.hasChunkAt(new BlockPos(x, 64, z))) continue;
                         int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                        if (!mc.level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty()) continue;
                         BlockPos pos = new BlockPos(x, y, z);
                         if (com.endruqq.imperium.game.BuildingManager.validate(ClientState.data, n.id, Buildings.SMELTERY, pos) == null) best = pos;
                     }
@@ -266,7 +299,7 @@ public final class ClientAutotest {
                 step++;
             }
             case 15 -> {
-                shot(mc, "09_construction_hud");
+                shot(mc, "11_construction_hud");
                 SoldierEntity s = nearest(mc, SoldierEntity.class);
                 if (s != null) {
                     cmd(mc, String.format("tp @s %.1f %.1f %.1f", s.getX() + 1.5, s.getY(), s.getZ()));
@@ -289,7 +322,7 @@ public final class ClientAutotest {
                 step++;
             }
             case 17 -> {
-                shot(mc, "10_soldier_equipment");
+                shot(mc, "12_soldier_equipment");
                 mc.setScreen(null);
                 cmd(mc, "imperium info");
                 wait = 40;
@@ -298,6 +331,46 @@ public final class ClientAutotest {
             case 18 -> finish(mc, true, "all steps done");
             default -> {
             }
+        }
+    }
+
+    private static final List<BlockPos> PLACED = new ArrayList<>();
+
+    /** Buys a few ready-made buildings around the capital. */
+    private static void placePrefabs(Minecraft mc) {
+        Nation n = ClientState.myNation();
+        Province cap = n == null ? null : ClientState.data.provinces.get(n.capitalProvince);
+        if (cap == null || cap.core == null) return;
+        com.endruqq.imperium.game.building.BuildingType[] types = {Buildings.HUT, Buildings.FARM, Buildings.BARRACKS, Buildings.SMELTERY,
+                Buildings.MARKET, Buildings.TAVERN, Buildings.STONE_HOUSE};
+        for (com.endruqq.imperium.game.building.BuildingType type : types) {
+            BlockPos found = null;
+            for (int r = 18; r < 70 && found == null; r += 3) {
+                for (int a = 0; a < 24 && found == null; a++) {
+                    int x = cap.core.getX() + (int) (Math.cos(a * Math.PI / 12) * r);
+                    int z = cap.core.getZ() + (int) (Math.sin(a * Math.PI / 12) * r);
+                    if (!mc.level.hasChunkAt(new BlockPos(x, 64, z))) continue;
+                    int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (!mc.level.getBlockState(pos.below()).getFluidState().isEmpty()) continue;
+                    if (com.endruqq.imperium.game.BuildingManager.validate(ClientState.data, n.id, type, pos) != null) continue;
+                    boolean clash = false;
+                    for (BlockPos q : PLACED) if (Math.abs(q.getX() - x) < 14 && Math.abs(q.getZ() - z) < 14) clash = true;
+                    if (!clash) found = pos;
+                }
+            }
+            if (found == null) {
+                log("no spot for " + type.id);
+                continue;
+            }
+            PLACED.add(found);
+            CompoundTag t = new CompoundTag();
+            t.putString("type", type.id);
+            t.putLong("pos", found.asLong());
+            t.putBoolean("prefab", true);
+            t.putInt("facing", 2);
+            ImperiumNet.sendToServer(new ActionPacket("place_building", t));
+            log("prefab " + type.id + " at " + found);
         }
     }
 

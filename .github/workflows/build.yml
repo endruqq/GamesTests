@@ -79,6 +79,9 @@ jobs:
           simulationDistance:8
           soundCategory_master:0.0
           OPTS
+          # Forge's early loading window sometimes cannot open on Xvfb and then waits for a y/n answer forever
+          mkdir -p run/config
+          echo 'earlyWindowControl = false' > run/config/fml.toml
 
       - name: Run scripted client
         env:

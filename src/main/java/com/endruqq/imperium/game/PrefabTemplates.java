@@ -26,7 +26,7 @@ public final class PrefabTemplates {
         META.put("market", new Meta(0, null, new int[][]{}));
         META.put("granary", new Meta(0, null, new int[][]{}));
         META.put("bank", new Meta(0, null, new int[][]{}));
-        META.put("factory", new Meta(0, null, new int[][]{{11, 19, 3}, {12, 19, 4}, {3, 19, 3}, {4, 19, 4}}));
+        META.put("factory", new Meta(0, null, new int[][]{{10, 23, 0}, {11, 23, 1}, {3, 20, 0}, {4, 20, 1}}));
         META.put("tavern", new Meta(0, null, new int[][]{{2, 12, 2}}));
         META.put("academy", new Meta(0, null, new int[][]{}));
         META.put("temple", new Meta(0, null, new int[][]{}));

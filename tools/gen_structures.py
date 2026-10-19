@@ -785,21 +785,37 @@ def factory(b):
     b.chest(3, 6, 3, "south")
     b.set(2, 6, 6, "lectern", facing="east")
     b.lantern(3, 8, 6, hanging=True)
-    # roof: gable along x with a skylight
-    b.gable_roof(x0, z0, x1, z1, 10, "deepslate_tile", "x", overhang=1, gable="bricks")
-    for x in range(2, 13):
-        b.set(x, 13, 6, "glass") if x % 3 else None
-        b.set(x, 13, 8, "glass") if x % 3 else None
-    # chimneys
-    for (cx, cz) in ((11, 3), (3, 3)):
-        for y in range(1, 19):
-            b.fill(cx, y, cz, cx + 1, y, cz + 1, "bricks")
-        for x, z in ((cx, cz), (cx + 1, cz), (cx, cz + 1), (cx + 1, cz + 1)):
-            b.set(x, 17, z, "stone_bricks")
-        b.smoke.append((cx, 19, cz))
-        b.smoke.append((cx + 1, 19, cz + 1))
-    b.fill(11, 19, 3, 12, 19, 4, "air")
-    b.fill(3, 19, 3, 4, 19, 4, "air")
+    # sawtooth roof: three teeth rising to the east, each with a glazed north-light wall
+    for xa in (1, 5, 9):
+        for k in range(3):
+            x = xa + k
+            for z in range(z0, z1 + 1):
+                b.stairs(x, 10 + k, z, "deepslate_tile", "east")
+            for y in range(10, 10 + k):
+                b.set(x, y, z0, "bricks")
+                b.set(x, y, z1, "bricks")
+        xg = xa + 3
+        for y in range(10, 13):
+            b.set(xg, y, z0, "stone_bricks")
+            b.set(xg, y, z1, "stone_bricks")
+            for z in range(z0 + 1, z1):
+                b.set(xg, y, z, "glass_pane" if z % 3 else "dark_oak_fence")
+        for z in range(z0, z1 + 1):
+            b.slab(xg, 13, z, "deepslate_tile", "bottom")
+    # east parapet
+    for z in range(z0, z1 + 1):
+        b.set(x1, 10, z, "stone_bricks")
+    # two tall chimneys standing behind the hall, as in the old brickworks
+    for (cx, cz, top) in ((10, 0, 22), (3, 0, 19)):
+        b.fill(cx - 1, 0, cz, cx + 2, 0, cz + 1, "stone_bricks")
+        b.fill(cx, 1, cz, cx + 1, top, cz + 1, "bricks")
+        b.fill(cx, top - 3, cz, cx + 1, top - 3, cz + 1, "stone_bricks")
+        b.fill(cx, top, cz, cx + 1, top, cz + 1, "stone_bricks")
+        b.smoke.append((cx, top + 1, cz))
+        b.smoke.append((cx + 1, top + 1, cz + 1))
+    # name board over the gate
+    b.fill(9, 8, z1 + 1, 13, 8, z1 + 1, "dark_oak_planks")
+    b.set(11, 8, z1 + 2, "lantern", hanging="false")
     # machines
     for x in (6, 8, 10):
         b.set(x, 1, 5, "piston", facing="up", extended="false")
@@ -1164,33 +1180,60 @@ def archery_range(b):
 
 @design("armory", 5, 12, [("masonry", 40), ("doors", 1), ("smithing_table", 1), ("anvils", 1), ("grindstone", 1), ("iron_block", 1)])
 def armory(b):
-    """Stone arsenal with small barred windows and corner turrets."""
+    """Castellated red-brick armory, like the drill halls of the 1890s: stone quoins, entrance tower with a flag."""
     ground(b, "gravel")
+    sidewalk(b, 0, 9, 10, 10, "smooth_stone")
     x0, z0, x1, z1 = 1, 1, 9, 8
-    b.fill(x0, 0, z0, x1, 0, z1, "cobblestone")
-    b.walls(x0, z0, x1, z1, 1, 7, "stone_bricks")
-    b.band(x0, z0, x1, z1, 1, "polished_andesite")
+    b.fill(x0, 0, z0, x1, 0, z1, "polished_andesite")
+    b.walls(x0, z0, x1, z1, 1, 7, "bricks")
+    b.band(x0, z0, x1, z1, 1, "stone_bricks")
+    b.band(x0, z0, x1, z1, 7, "stone_bricks")
+    # corner turrets with stone quoins
     for x, z in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
-        b.fill(x, 1, z, x, 9, z, "polished_deepslate")
-        b.set(x, 10, z, "deepslate_brick_wall")
-    for x in (3, 7):
-        b.set(x, 3, z1, "iron_bars")
-        b.set(x, 5, z1, "iron_bars")
-        b.set(x, 3, z0, "iron_bars")
+        for y in range(1, 10):
+            b.set(x, y, z, "stone_bricks" if y % 2 else "polished_andesite")
+        b.set(x, 10, z, "stone_brick_wall")
+    # flat roof behind a crenellated parapet
+    b.fill(x0, 8, z0, x1, 8, z1, "bricks")
+    for x in range(x0 + 1, x1):
+        b.set(x, 9, z0, "brick_wall" if x % 2 else "bricks")
+        b.set(x, 9, z1, "brick_wall" if x % 2 else "bricks")
+    for z in range(z0 + 1, z1):
+        b.set(x0, 9, z, "brick_wall" if z % 2 else "bricks")
+        b.set(x1, 9, z, "brick_wall" if z % 2 else "bricks")
+    # entrance tower in the middle of the facade
+    b.fill(4, 1, z1, 6, 11, z1, "bricks")
+    b.fill(4, 1, z1, 4, 11, z1, "stone_bricks")
+    b.fill(6, 1, z1, 6, 11, z1, "stone_bricks")
+    b.fill(4, 8, z1 - 1, 6, 11, z1 - 1, "bricks")
+    b.set(4, 12, z1, "stone_brick_wall")
+    b.set(6, 12, z1, "stone_brick_wall")
+    b.door(5, 1, z1, "dark_oak", "north")
+    b.stairs(4, 3, z1 + 1, "stone_brick", "east", half="top")
+    b.stairs(6, 3, z1 + 1, "stone_brick", "west", half="top")
+    b.set(5, 3, z1, "stone_bricks")
+    b.set(5, 5, z1, "iron_bars")
+    b.set(5, 6, z1, "iron_bars")
+    b.set(5, 9, z1, "glass_pane")
+    for y in range(12, 15):
+        b.set(5, y, z1, "dark_oak_fence")
+    b.set(5, 15, z1, "lantern", hanging="false")
+    for y in (13, 14):
+        b.set(6, y, z1, "red_wool")
+        b.set(7, y, z1, "red_wool")
+        b.set(8, y, z1, "white_wool" if y == 13 else "red_wool")
+    # tall barred windows with stone sills
+    for x in (2, 8):
+        b.fill(x, 3, z1, x, 5, z1, "iron_bars")
+        b.slab(x, 2, z1 + 1, "stone_brick", "top")
+        b.set(x, 6, z1, "stone_bricks")
     for z in (3, 6):
-        b.set(x0, 3, z, "iron_bars")
-        b.set(x1, 3, z, "iron_bars")
-    b.door(5, 1, z1, "spruce", "north")
-    b.fill(4, 3, z1, 6, 3, z1, "polished_deepslate")
-    b.fill(x0, 8, z0, x1, 8, z1, "stone_bricks")
-    for x in range(x0, x1 + 1):
-        if x % 2:
-            b.set(x, 9, z0, "stone_brick_wall")
-            b.set(x, 9, z1, "stone_brick_wall")
-    for z in range(z0, z1 + 1):
-        if z % 2:
-            b.set(x0, 9, z, "stone_brick_wall")
-            b.set(x1, 9, z, "stone_brick_wall")
+        for x in (x0, x1):
+            b.fill(x, 3, z, x, 5, z, "iron_bars")
+    for x in (3, 7):
+        b.fill(x, 3, z0, x, 5, z0, "iron_bars")
+    b.lamp_post(1, 10, 1, 3)
+    b.lamp_post(9, 10, 1, 3)
     # forge
     b.set(3, 1, 2, "smithing_table")
     b.set(4, 1, 2, "anvil", facing="east")
@@ -1200,6 +1243,10 @@ def armory(b):
     b.barrel(2, 1, 6)
     b.barrel(2, 1, 7)
     b.chest(8, 1, 7, "west")
+    # gun racks
+    for x in (3, 7):
+        b.set(x, 1, 5, "spruce_fence")
+        b.set(x, 2, 5, "spruce_trapdoor", facing="south", half="top", open="false")
     b.lantern(5, 7, 5, hanging=True)
 
 
@@ -1277,9 +1324,10 @@ def watchtower(b):
 @design("fortress", 6, 13, [("masonry", 80), ("doors", 1), ("iron_bars", 8), ("walls", 10)])
 def fortress(b):
     ground(b, "gravel")
-    # curtain walls
-    b.walls(0, 0, 12, 12, 1, 5, "stone_bricks")
-    b.band(0, 0, 12, 12, 1, "polished_andesite")
+    # curtain walls: brick with a stone plinth and cornice
+    b.walls(0, 0, 12, 12, 1, 5, "bricks")
+    b.band(0, 0, 12, 12, 1, "stone_bricks")
+    b.band(0, 0, 12, 12, 5, "stone_bricks")
     for x in range(0, 13):
         if x % 2 == 0:
             b.set(x, 6, 0, "stone_brick_wall")
@@ -1290,7 +1338,13 @@ def fortress(b):
             b.set(12, 6, z, "stone_brick_wall")
     # corner towers
     for cx, cz in ((0, 0), (10, 0), (0, 10), (10, 10)):
-        b.fill(cx, 1, cz, cx + 2, 8, cz + 2, "stone_bricks")
+        b.fill(cx, 1, cz, cx + 2, 8, cz + 2, "bricks")
+        b.fill(cx, 8, cz, cx + 2, 8, cz + 2, "stone_bricks")
+        b.fill(cx, 1, cz, cx + 2, 1, cz + 2, "stone_bricks")
+        for qx in (cx, cx + 2):
+            for qz in (cz, cz + 2):
+                for y in range(3, 8, 2):
+                    b.set(qx, y, qz, "stone_bricks")
         for x in range(cx, cx + 3):
             for z in range(cz, cz + 3):
                 if x in (cx, cx + 2) or z in (cz, cz + 2):
@@ -1314,7 +1368,11 @@ def fortress(b):
     # keep
     k0, k1 = 4, 8
     b.fill(1, 0, 1, 11, 0, 11, "cobblestone")
-    b.walls(k0, 3, k1, 8, 1, 9, "stone_bricks")
+    b.walls(k0, 3, k1, 8, 1, 9, "bricks")
+    b.band(k0, 3, k1, 8, 1, "stone_bricks")
+    b.band(k0, 3, k1, 8, 9, "stone_bricks")
+    for x, z in ((k0, 3), (k1, 3), (k0, 8), (k1, 8)):
+        b.fill(x, 1, z, x, 9, z, "stone_bricks")
     b.door(6, 1, 8, "spruce", "north")
     for y in (4, 7):
         b.set(6, y, 8, "iron_bars")
@@ -1325,7 +1383,11 @@ def fortress(b):
         if x % 2 == 0:
             b.set(x, 11, 3, "stone_brick_wall")
             b.set(x, 11, 8, "stone_brick_wall")
-    b.set(6, 12, 5, "dark_oak_fence")
+    for y in range(11, 15):
+        b.set(6, y, 5, "dark_oak_fence")
+    for y in (13, 14):
+        for x in (7, 8, 9):
+            b.set(x, y, 5, "red_wool" if (y == 14 or x != 8) else "white_wool")
     b.lantern(6, 9, 5, hanging=True)
     b.lantern(3, 1, 10)
     b.lantern(9, 1, 10)

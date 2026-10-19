@@ -271,10 +271,10 @@ public final class ClientAutotest {
                     return;
                 }
                 BlockPos best = null;
-                for (int r = 16; r < 60 && best == null; r += 4) {
-                    for (int a = 0; a < 16 && best == null; a++) {
-                        int x = cap.core.getX() + (int) (Math.cos(a * Math.PI / 8) * r);
-                        int z = cap.core.getZ() + (int) (Math.sin(a * Math.PI / 8) * r);
+                for (int r = 16; r < 120 && best == null; r += 4) {
+                    for (int a = 0; a < 24 && best == null; a++) {
+                        int x = cap.core.getX() + (int) (Math.cos(a * Math.PI / 12) * r);
+                        int z = cap.core.getZ() + (int) (Math.sin(a * Math.PI / 12) * r);
                         if (!mc.level.hasChunkAt(new BlockPos(x, 64, z))) continue;
                         int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                         if (!mc.level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty()) continue;
@@ -352,7 +352,6 @@ public final class ClientAutotest {
                     if (!mc.level.hasChunkAt(new BlockPos(x, 64, z))) continue;
                     int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                     BlockPos pos = new BlockPos(x, y, z);
-                    if (!mc.level.getBlockState(pos.below()).getFluidState().isEmpty()) continue;
                     if (com.endruqq.imperium.game.BuildingManager.validate(ClientState.data, n.id, type, pos) != null) continue;
                     boolean clash = false;
                     for (BlockPos q : PLACED) if (Math.abs(q.getX() - x) < 14 && Math.abs(q.getZ() - z) < 14) clash = true;

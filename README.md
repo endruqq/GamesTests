@@ -4,6 +4,21 @@ Mod do **Minecraft 1.20.1 / Forge 47.4.0**. Łączy Minecrafta z grą strategicz
 Gracze (i boty) prowadzą państwa podzielone na prowincje. Budują funkcyjne budynki, rozwijają drzewko technologii,
 prowadzą dyplomację, wypowiadają wojny i dowodzą armiami z widoku RTS, a potem schodzą na ziemię w pierwszej osobie.
 
+## Zrzuty ekranu
+
+Zrzuty robi automatyczny test klienta w CI przy każdym pushu, więc zawsze pokazują aktualną wersję.
+
+| | |
+|---|---|
+| ![Widok RTS](docs/screenshots/imperium_03_rts_buildings.png) | ![Mapa strategiczna](docs/screenshots/imperium_04_strategic_map.png) |
+| Widok RTS: gotowe budynki, wieża prowincji, zaznaczone jednostki | Mapa strategiczna: państwa, prowincje, rdzenie, jednostki |
+| ![Wojna](docs/screenshots/imperium_05_war_map.png) | ![Drzewko](docs/screenshots/imperium_06_tech_tree.png) |
+| Po wypowiedzeniu wojny granica robi się czerwona | Drzewko technologii |
+| ![Dialog](docs/screenshots/imperium_09_dialog.png) | ![Budowa](docs/screenshots/imperium_11_construction_hud.png) |
+| Rozmowa z mieszkańcem (nastrój zależy od stanu państwa) | Plac budowy: HUD pokazuje wymagane bloki |
+| ![Dyplomacja](docs/screenshots/imperium_08_diplomacy.png) | ![Ekwipunek](docs/screenshots/imperium_12_soldier_equipment.png) |
+| Dyplomacja | Ekwipunek żołnierza |
+
 ## Instalacja
 
 1. Zainstaluj Minecraft Forge **1.20.1-47.4.0** (działa na każdym Forge 47.x).

@@ -227,6 +227,23 @@ public final class GameManager {
             }
         }
 
+        // core sites first, so that capitals can be moved from the sea to dry land
+        java.util.Map<Integer, BlockPos> sites = new java.util.HashMap<>();
+        for (Province p : d.provinces.values()) {
+            if (p.cellCount > 0) sites.put(p.id, pickCoreSite(level, d, p));
+        }
+        for (Nation n : d.nations.values()) {
+            BlockPos capSite = sites.get(n.capitalProvince);
+            if (capSite == null || !TowerBuilder.isWater(level, capSite)) continue;
+            for (Province p : d.provincesOf(n.id)) {
+                BlockPos site = sites.get(p.id);
+                if (site != null && !TowerBuilder.isWater(level, site)) {
+                    n.capitalProvince = p.id;
+                    break;
+                }
+            }
+        }
+
         // towers & cores
         for (Province p : d.provinces.values()) {
             if (p.cellCount == 0) {
@@ -236,7 +253,7 @@ public final class GameManager {
             p.originalOwner = p.owner;
             Nation owner = d.nation(p.owner);
             boolean capital = owner != null && owner.capitalProvince == p.id;
-            BlockPos base = pickCoreSite(level, d, p);
+            BlockPos base = sites.get(p.id);
             TowerBuilder.build(level, base, owner, capital);
             p.core = base;
             p.coreBuilt = true;

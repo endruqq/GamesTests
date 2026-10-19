@@ -41,7 +41,7 @@ public class Building {
     public int maxX() { return pos.getX() + radius(); }
     public int minZ() { return pos.getZ() - radius(); }
     public int maxZ() { return pos.getZ() + radius(); }
-    public int minY() { return pos.getY() - 2; }
+    public int minY() { return pos.getY() - 1; }
     public int maxY() { return pos.getY() + height(); }
 
     public boolean contains(BlockPos p) {

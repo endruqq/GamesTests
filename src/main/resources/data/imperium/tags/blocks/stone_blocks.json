@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "#imperium:masonry",
+    "minecraft:stone",
     "minecraft:deepslate",
     "minecraft:andesite",
     "minecraft:diorite",

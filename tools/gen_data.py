@@ -169,20 +169,21 @@ def gen_tags():
     tag("minecraft/tags/blocks/mineable/axe", [MOD + ":construction_site"])
     tag("minecraft/tags/blocks/needs_iron_tool", [MOD + ":steel_block"])
     tag("minecraft/tags/blocks/beacon_base_blocks", [MOD + ":steel_block"])
-    masonry = ["#minecraft:stone_bricks", "minecraft:bricks", "minecraft:stone", "minecraft:cobblestone", "minecraft:mossy_cobblestone",
+    # only crafted/placed stone counts as masonry - natural rock must not complete buildings on its own
+    masonry = ["#minecraft:stone_bricks", "minecraft:bricks", "minecraft:cobblestone", "minecraft:mossy_cobblestone",
                "minecraft:smooth_stone", "minecraft:polished_andesite", "minecraft:polished_diorite", "minecraft:polished_granite",
                "minecraft:deepslate_bricks", "minecraft:cracked_deepslate_bricks", "minecraft:deepslate_tiles", "minecraft:cracked_deepslate_tiles",
-               "minecraft:polished_deepslate", "minecraft:cobbled_deepslate", "minecraft:chiseled_deepslate", "minecraft:sandstone",
-               "minecraft:cut_sandstone", "minecraft:smooth_sandstone", "minecraft:chiseled_sandstone", "minecraft:red_sandstone",
+               "minecraft:polished_deepslate", "minecraft:cobbled_deepslate", "minecraft:chiseled_deepslate",
+               "minecraft:cut_sandstone", "minecraft:smooth_sandstone", "minecraft:chiseled_sandstone",
                "minecraft:cut_red_sandstone", "minecraft:smooth_red_sandstone", "minecraft:mud_bricks", "minecraft:nether_bricks",
                "minecraft:red_nether_bricks", "minecraft:polished_blackstone_bricks", "minecraft:cracked_polished_blackstone_bricks",
-               "minecraft:blackstone", "minecraft:polished_blackstone", "minecraft:quartz_block", "minecraft:quartz_bricks",
+               "minecraft:polished_blackstone", "minecraft:quartz_block", "minecraft:quartz_bricks",
                "minecraft:end_stone_bricks", "minecraft:prismarine_bricks", "minecraft:packed_mud"]
     tag(MOD + "/tags/blocks/masonry", masonry)
     tag(MOD + "/tags/blocks/building_materials", ["#minecraft:planks", "#minecraft:logs", "#" + MOD + ":masonry", "#minecraft:terracotta",
                                                   "minecraft:white_concrete", "minecraft:light_gray_concrete", "minecraft:gray_concrete",
                                                   "minecraft:bamboo_block", "minecraft:bamboo_mosaic"])
-    tag(MOD + "/tags/blocks/stone_blocks", ["#" + MOD + ":masonry", "minecraft:deepslate", "minecraft:andesite", "minecraft:diorite",
+    tag(MOD + "/tags/blocks/stone_blocks", ["#" + MOD + ":masonry", "minecraft:stone", "minecraft:deepslate", "minecraft:andesite", "minecraft:diorite",
                                             "minecraft:granite", "minecraft:tuff", "minecraft:calcite"])
     tag(MOD + "/tags/items/resource/wood", ["minecraft:bamboo_block", "minecraft:stripped_bamboo_block"])
     tag(MOD + "/tags/items/resource/stone", ["#minecraft:stone_crafting_materials", "#minecraft:stone_tool_materials", "minecraft:stone",

@@ -345,17 +345,20 @@ public final class ClientAutotest {
                 step = 200;
             }
             case 200 -> {
-                cmd(mc, String.format("tp @s %d %d %d", mc.player.getBlockX(), mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, mc.player.getBlockX(),
-                        mc.player.getBlockZ()) + 1, mc.player.getBlockZ()));
+                // the server builds at the ground level under the player, whatever height the player is at
                 showcaseOrigin = mc.player.blockPosition();
                 cmd(mc, "imperium showcase");
-                wait = 160;
+                wait = 300;
                 step = 201;
             }
             case 201 -> {
                 // clean shots: spectator camera, no HUD
                 mc.setScreen(null);
                 RtsCamera.exit();
+                // the lawn behind the first building lies at the level the catalogue was built on
+                int lx = showcaseOrigin.getX() + 4, lz = showcaseOrigin.getZ() - com.endruqq.imperium.game.Showcase.STEP_Z / 2 + 2;
+                showcaseOrigin = new BlockPos(showcaseOrigin.getX(), mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, lx, lz), showcaseOrigin.getZ());
+                log("showcase ground at y=" + showcaseOrigin.getY());
                 cmd(mc, "gamemode spectator");
                 mc.options.hideGui = true;
                 showcaseIndex = 0;

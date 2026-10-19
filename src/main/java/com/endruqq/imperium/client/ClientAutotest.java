@@ -88,7 +88,7 @@ public final class ClientAutotest {
             Imperium.LOGGER.error("[AUTOTEST] failure", t);
             finish(mc, false, t.toString());
         }
-        if (tick > 20 * 60 * 12) finish(mc, false, "timeout at step " + step);
+        if (tick > 20 * 60 * 16) finish(mc, false, "timeout at step " + step);
     }
 
     private static void run(Minecraft mc) {
@@ -177,6 +177,9 @@ public final class ClientAutotest {
                 step++;
             }
             case 8 -> {
+                CompoundTag jobs = new CompoundTag();
+                jobs.putString("op", "auto");
+                ImperiumNet.sendToServer(new ActionPacket("jobs", jobs));
                 if (!PLACED.isEmpty()) {
                     BlockPos first = PLACED.get(0);
                     RtsCamera.lookAt(first.getX(), first.getZ() + 6);
@@ -222,9 +225,15 @@ public final class ClientAutotest {
             }
             case 10 -> {
                 shot(mc, "07_nation");
-                mc.setScreen(new NationScreen(null, 1));
+                mc.setScreen(new NationScreen(null, NationScreen.PEOPLE));
+                wait = 40;
+                step = 100;
+            }
+            case 100 -> {
+                shot(mc, "07b_people");
+                mc.setScreen(new NationScreen(null, NationScreen.DIPLOMACY));
                 wait = 30;
-                step++;
+                step = 11;
             }
             case 11 -> {
                 shot(mc, "08_diplomacy");
@@ -328,21 +337,69 @@ public final class ClientAutotest {
                 wait = 40;
                 step++;
             }
-            case 18 -> finish(mc, true, "all steps done");
+            case 18 -> {
+                // a catalogue of all ready-made buildings, away from the arena
+                cmd(mc, "worldborder set 8000");
+                cmd(mc, "tp @s ~420 ~ ~");
+                wait = 120;
+                step = 200;
+            }
+            case 200 -> {
+                cmd(mc, String.format("tp @s %d %d %d", mc.player.getBlockX(), mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, mc.player.getBlockX(),
+                        mc.player.getBlockZ()) + 1, mc.player.getBlockZ()));
+                showcaseOrigin = mc.player.blockPosition();
+                cmd(mc, "imperium showcase");
+                wait = 160;
+                step = 201;
+            }
+            case 201 -> {
+                if (!(mc.screen instanceof RtsScreen)) mc.setScreen(new RtsScreen());
+                showcaseIndex = 0;
+                wait = 40;
+                step = 202;
+            }
+            case 202 -> {
+                // two buildings per picture, looking from the south-east at their entrances
+                int count = 0;
+                for (com.endruqq.imperium.game.building.BuildingType t : Buildings.all()) if (t.prefabCost != null) count++;
+                if (showcaseIndex >= count) {
+                    step = 210;
+                    return;
+                }
+                int i = showcaseIndex;
+                int col = i % com.endruqq.imperium.game.Showcase.PER_ROW, row = i / com.endruqq.imperium.game.Showcase.PER_ROW;
+                double x = showcaseOrigin.getX() + 12 + col * com.endruqq.imperium.game.Showcase.STEP_X + com.endruqq.imperium.game.Showcase.STEP_X / 2.0;
+                double z = showcaseOrigin.getZ() + row * com.endruqq.imperium.game.Showcase.STEP_Z;
+                RtsCamera.lookAt(x, z + 2);
+                RtsCamera.yaw = 160;
+                RtsCamera.pitch = 28;
+                RtsCamera.height = 15;
+                wait = 50;
+                step = 203;
+            }
+            case 203 -> {
+                shot(mc, String.format("p%02d_prefabs", showcaseIndex / 2 + 1));
+                showcaseIndex += 2;
+                wait = 10;
+                step = 202;
+            }
+            case 210 -> finish(mc, true, "all steps done");
             default -> {
             }
         }
     }
 
     private static final List<BlockPos> PLACED = new ArrayList<>();
+    private static BlockPos showcaseOrigin = BlockPos.ZERO;
+    private static int showcaseIndex;
 
     /** Buys a few ready-made buildings around the capital. */
     private static void placePrefabs(Minecraft mc) {
         Nation n = ClientState.myNation();
         Province cap = n == null ? null : ClientState.data.provinces.get(n.capitalProvince);
         if (cap == null || cap.core == null) return;
-        com.endruqq.imperium.game.building.BuildingType[] types = {Buildings.HUT, Buildings.FARM, Buildings.BARRACKS, Buildings.SMELTERY,
-                Buildings.MARKET, Buildings.TAVERN, Buildings.STONE_HOUSE};
+        com.endruqq.imperium.game.building.BuildingType[] types = {Buildings.HUT, Buildings.FARM, Buildings.BARRACKS, Buildings.LUMBER_MILL,
+                Buildings.MARKET, Buildings.TAVERN, Buildings.STONE_HOUSE, Buildings.MINE};
         for (com.endruqq.imperium.game.building.BuildingType type : types) {
             BlockPos found = null;
             for (int r = 18; r < 70 && found == null; r += 3) {

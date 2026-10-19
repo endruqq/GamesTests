@@ -120,6 +120,12 @@ public final class ImperiumCommand {
                             c.getSource().sendSuccess(() -> Component.translatable("imperium.msg.grace_set", sec), true);
                             return 1;
                         })))
+                .then(Commands.literal("showcase").requires(s -> s.hasPermission(2)).executes(c -> {
+                    ServerPlayer p = c.getSource().getPlayerOrException();
+                    int n = com.endruqq.imperium.game.Showcase.build(p.serverLevel(), p.blockPosition()).size();
+                    c.getSource().sendSuccess(() -> Component.translatable("imperium.msg.showcase", n), true);
+                    return n;
+                }))
                 .then(Commands.literal("research").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("all").executes(c -> {
                             GameData d = GameData.get(c.getSource().getServer());

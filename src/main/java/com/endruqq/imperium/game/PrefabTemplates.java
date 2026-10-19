@@ -16,6 +16,27 @@ public final class PrefabTemplates {
     private static final Map<String, Meta> META = new HashMap<>();
 
     static {
+        META.put("hut", new Meta(0, null, new int[][]{{6, 9, 2}}));
+        META.put("stone_house", new Meta(0, null, new int[][]{{6, 13, 2}}));
+        META.put("manor", new Meta(0, null, new int[][]{{8, 21, 2}, {2, 20, 8}}));
+        META.put("farm", new Meta(0, null, new int[][]{}));
+        META.put("lumber_mill", new Meta(0, null, new int[][]{}));
+        META.put("mine", new Meta(8, new int[]{8, 4, 4, 2}, new int[][]{{1, 19, 2}}));
+        META.put("smeltery", new Meta(0, null, new int[][]{{9, 16, 9}, {10, 16, 10}}));
+        META.put("market", new Meta(0, null, new int[][]{}));
+        META.put("granary", new Meta(0, null, new int[][]{}));
+        META.put("bank", new Meta(0, null, new int[][]{}));
+        META.put("factory", new Meta(0, null, new int[][]{{11, 19, 3}, {12, 19, 4}, {3, 19, 3}, {4, 19, 4}}));
+        META.put("tavern", new Meta(0, null, new int[][]{{2, 12, 2}}));
+        META.put("academy", new Meta(0, null, new int[][]{}));
+        META.put("temple", new Meta(0, null, new int[][]{}));
+        META.put("hospital", new Meta(0, null, new int[][]{}));
+        META.put("barracks", new Meta(0, null, new int[][]{}));
+        META.put("archery_range", new Meta(0, null, new int[][]{}));
+        META.put("armory", new Meta(0, null, new int[][]{}));
+        META.put("siege_workshop", new Meta(0, null, new int[][]{}));
+        META.put("watchtower", new Meta(0, null, new int[][]{}));
+        META.put("fortress", new Meta(0, null, new int[][]{}));
     }
 
     private PrefabTemplates() {}
